@@ -18,7 +18,6 @@ const LoginPage: React.FC = () => {
       setLoading(false);
       if (username === "admin" && password === "admin123") {
         alert("Login successful!");
-        // redirect to dashboard, e.g. navigate("/dashboard")
       } else {
         setError("Invalid username or password");
       }
