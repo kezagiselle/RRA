@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { MdCloudUpload } from "react-icons/md";
 
 interface ValidationFormProps {
   onSuccess: () => void;
@@ -25,7 +24,6 @@ const ValidationForm: React.FC<ValidationFormProps> = ({ onSuccess }) => {
 
   const [errors, setErrors] = useState<any>({});
 
-  
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -37,7 +35,6 @@ const ValidationForm: React.FC<ValidationFormProps> = ({ onSuccess }) => {
     }
   };
 
-  
   const validate = () => {
     const newErrors: any = {};
 
@@ -70,20 +67,12 @@ const ValidationForm: React.FC<ValidationFormProps> = ({ onSuccess }) => {
     setErrors(formErrors);
 
     if (Object.keys(formErrors).length === 0) {
-      onSuccess(); 
+      onSuccess();
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white shadow-lg rounded-2xl p-8 md:p-10 w-full max-w-3xl mx-auto"
-    >
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-        Applicant Registration
-      </h1>
-
-      
+    <form onSubmit={handleSubmit}>
       {[
         { label: "T-PIN", name: "tpin", type: "text" },
         { label: "T-Company", name: "tcompany", type: "text" },
@@ -99,53 +88,31 @@ const ValidationForm: React.FC<ValidationFormProps> = ({ onSuccess }) => {
         { label: "Date", name: "date", type: "date" },
         { label: "Status", name: "status", type: "text" },
       ].map((field) => (
-        <div className="mb-4" key={field.name}>
-          <label className="block text-gray-700 font-medium mb-1">{field.label}</label>
+        <div key={field.name}>
+          <label>{field.label}</label>
           <input
             type={field.type}
             name={field.name}
             value={(formData as any)[field.name]}
             onChange={handleChange}
-            className={`w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors[field.name] ? "border-red-500" : ""
-            }`}
           />
-          {errors[field.name] && (
-            <p className="text-red-500 text-sm mt-1">{errors[field.name]}</p>
-          )}
+          {errors[field.name] && <p>{errors[field.name]}</p>}
         </div>
       ))}
 
-      
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium mb-1">Bachelor Degree (Upload)</label>
-        <div className="relative">
-          <input
-            type="file"
-            name="bachelor"
-            onChange={handleChange}
-            className={`w-full border border-gray-300 rounded-lg py-2 px-4 pr-10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.bachelor ? "border-red-500" : ""
-            }`}
-          />
-          <MdCloudUpload className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 text-2xl pointer-events-none" />
-        </div>
-        {formData.bachelor && (
-          <p className="text-green-600 text-sm mt-1">
-            Selected file: {(formData.bachelor as File).name}
-          </p>
-        )}
-        {errors.bachelor && (
-          <p className="text-red-500 text-sm mt-1">{errors.bachelor}</p>
-        )}
+      {/* Bachelor File Upload */}
+      <div>
+        <label>Bachelor Degree (Upload)</label>
+        <input
+          type="file"
+          name="bachelor"
+          onChange={handleChange}
+        />
+        {formData.bachelor && <p>Selected file: {(formData.bachelor as File).name}</p>}
+        {errors.bachelor && <p>{errors.bachelor}</p>}
       </div>
 
-      <button
-        type="submit"
-        className="w-full py-3 mt-6 text-lg font-semibold bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-200"
-      >
-        Apply Now
-      </button>
+      <button type="submit">Apply Now</button>
     </form>
   );
 };
