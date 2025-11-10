@@ -1,6 +1,8 @@
 import React from 'react'
 import ApplicantForm from '../components/ApplicantForm'
 import { RiArrowDropDownLine } from "react-icons/ri";
+import { MdCloudUpload } from "react-icons/md";
+
 
 function ApplicantPage() {
   const [tpin, setTpin] = React.useState('')
@@ -14,7 +16,7 @@ function ApplicantPage() {
   const [sector, setSector] = React.useState('')
   const [cell, setCell] = React.useState('')
   const [village, setVillage] = React.useState('')
-  const [bachelor, setBachelor] = React.useState('')
+const [bachelor, setBachelor] = React.useState<File | null>(null)
   const [date, setDate] = React.useState('')
   const [status, setStatus] = React.useState('')
 
@@ -22,7 +24,7 @@ function ApplicantPage() {
     <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white shadow-lg rounded-2xl p-10">
-          {/* Header */}
+        
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               Applicant Registration
@@ -32,9 +34,9 @@ function ApplicantPage() {
             </p>
           </div>
 
-          {/* Personal Information */}
+          
           <section className="mb-10">
-            <h2 className="text-xl font-semibold text-gray-700 mb-5 border-b border-gray-200 pb-2">
+            <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
               Personal Information
             </h2>
 
@@ -48,9 +50,9 @@ function ApplicantPage() {
             </div>
           </section>
 
-          {/* Location Information */}
+        
           <section className="mb-10">
-            <h2 className="text-xl font-semibold text-gray-700 mb-5 border-b border-gray-200 pb-2">
+            <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
               Location Information
             </h2>
 
@@ -63,22 +65,37 @@ function ApplicantPage() {
             </div>
           </section>
 
-          {/* Education & Other Info */}
+          
           <section>
-            <h2 className="text-xl font-semibold text-gray-700 mb-5 border-b border-gray-200 pb-2">
+            <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
               Education & Other Information
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <ApplicantForm label="Bachelor Degree" value={bachelor} onChange={(e) => setBachelor(e.target.value)} />
+       <ApplicantForm
+        label={
+         <span className="flex items-center gap-2">
+        <MdCloudUpload className="text-blue-500 text-2xl" /> 
+           Bachelor Degree (Upload)
+         </span>
+     }
+         type="file"
+         onChange={(e) => {
+          const files = e.target.files;
+         if (files && files.length > 0) {
+          setBachelor(files[0]);
+         }
+         }}
+         />
+
               <ApplicantForm label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               <ApplicantForm label="Status" icon={<RiArrowDropDownLine />} value={status} onChange={(e) => setStatus(e.target.value)} />
             </div>
           </section>
 
-          {/* Submit */}
+          
           <div className="mt-12 flex justify-center">
-            <button className="w-full md:w-1/2 py-4 text-lg font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 shadow-md">
+            <button className="w-full md:w-1/2 py-4 text-lg font-semibold bg-blue-300 text-white rounded-full hover:bg-blue-500 transition duration-200 shadow-md">
               Apply Now
             </button>
           </div>

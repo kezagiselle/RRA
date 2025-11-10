@@ -4,7 +4,7 @@ import { RiArrowDropDownLine } from "react-icons/ri";
 
 
 interface InputProps {
-    label: string,
+    label: React.ReactNode,
     icon?: React.ReactNode,
     type?: string,
     placeholder?: string,
@@ -18,17 +18,27 @@ function ApplicantForm({label, icon, type, value, onChange,className, placeholde
   return (
     <div className={"flex flex-col"}>
         <label className="text-gray-700 font-medium mb-2">{label}</label>
-         <div className="relative">
-        <input
-          type={type}
-          value={value}
-          onChange={onChange}
-          className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-green-200 focus:border-black outline-none"
-        />
-        {icon && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
-            {icon}
-          </span>
+      <div className="relative">
+        {type === "file" ? (
+          <input
+            type="file"
+            onChange={onChange}
+            className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 text-gray-700 text-base cursor-pointer focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+        ) : (
+          <>
+            <input
+              type={type}
+              value={value}
+              onChange={onChange}
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+            />
+            {icon && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
+                {icon}
+              </span>
+            )}
+            </>
         )}
       </div>
       </div>
