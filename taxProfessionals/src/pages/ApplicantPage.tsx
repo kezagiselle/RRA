@@ -2,9 +2,11 @@ import React from 'react'
 import ApplicantForm from '../components/ApplicantForm'
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { MdCloudUpload } from "react-icons/md";
+import { useNavigate } from 'react-router-dom';
 
 
 function ApplicantPage() {
+    const navigate = useNavigate();
   const [tpin, setTpin] = React.useState('')
   const [tcompany, setTcompany] = React.useState('')
   const [fullname, setFullname] = React.useState('')
@@ -19,6 +21,11 @@ function ApplicantPage() {
 const [bachelor, setBachelor] = React.useState<File | null>(null)
   const [date, setDate] = React.useState('')
   const [status, setStatus] = React.useState('')
+
+  const handleSubmit = (e:React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    navigate("/success")
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-6 lg:px-8">
@@ -94,11 +101,14 @@ const [bachelor, setBachelor] = React.useState<File | null>(null)
           </section>
 
           
-          <div className="mt-12 flex justify-center">
+         <form onSubmit={handleSubmit}>
+              <div className="mt-12 flex justify-center">
             <button className="w-full md:w-1/2 py-4 text-lg font-semibold bg-blue-300 text-white rounded-full hover:bg-blue-500 transition duration-200 shadow-md">
               Apply Now
             </button>
           </div>
+         </form>
+         
         </div>
       </div>
     </div>
