@@ -3,6 +3,7 @@ import ApplicantPage from './pages/ApplicantPage'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import SuccessfulPage from './pages/SuccessfulPage'
 import ApplicantDashboard from './pages/ApplicantDashboard'
+import LoginPage from './pages/LoginPage'
 
 
 
@@ -11,7 +12,8 @@ function App() {
 
   return (
     <>
-    <ApplicantDashboard />
+    {/* <ApplicantDashboard /> */}
+    <LoginPage />
     </>
     // <Router>
     //   <Routes>
