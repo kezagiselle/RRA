@@ -13,7 +13,8 @@ function App() {
   return (
     <>
     {/* <ApplicantDashboard /> */}
-    <LoginPage />
+    {/* <LoginPage /> */}
+    <ApplicantPage />
     </>
     // <Router>
     //   <Routes>
@@ -21,6 +22,7 @@ function App() {
     //     <Route path="/success" element={<ApplicantDashboard />} />
     //   </Routes>
     // </Router>
+  
  
     
   )

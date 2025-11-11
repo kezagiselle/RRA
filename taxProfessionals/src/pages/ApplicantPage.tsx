@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import ApplicantForm from '../components/ApplicantForm';
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { MdCloudUpload } from "react-icons/md";
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import Errors from '../components/Errors';
-import Header from './Header';
+// import Header from './Header';
+import rra from "../imgs/rra.png"
 
 function ApplicantPage() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const [tpin, setTpin] = useState('');
   const [tcompany, setTcompany] = useState('');
   const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
@@ -24,12 +24,12 @@ function ApplicantPage() {
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('');
   const [errors, setErrors] = useState<any>({});
+  const [currentStep, setCurrentStep] = useState(1);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formErrors: any = {};
 
-    if (!tpin.trim()) formErrors.tpin = "TPIN is required";
     if (!tcompany.trim()) formErrors.tcompany = "Company name is required";
     if (!fullname.trim()) formErrors.fullname = "Full name is required";
     if (!email.trim()) formErrors.email = "Email is required";
@@ -49,102 +49,296 @@ function ApplicantPage() {
 
     setErrors(formErrors);
 
-    if (Object.keys(formErrors).length === 0) {
-      navigate("/success");
+    // if (Object.keys(formErrors).length === 0) {
+    //   navigate("/success");
+    // }
+  };
+
+  const validateStep1 = () => {
+    const stepErrors: any = {};
+    if (!tcompany.trim()) stepErrors.tcompany = "Company name is required";
+    if (!fullname.trim()) stepErrors.fullname = "Full name is required";
+    if (!email.trim()) stepErrors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) stepErrors.email = "Email is invalid";
+    if (!phonenumber.trim()) stepErrors.phonenumber = "Phone number is required";
+    else if (!/^\+?\d{8,15}$/.test(phonenumber)) stepErrors.phonenumber = "Phone number is invalid";
+    if (!password) stepErrors.password = "Password is required";
+    else if (password.length < 6) stepErrors.password = "Password must be at least 6 characters";
+
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const stepErrors: any = {};
+    if (!province) stepErrors.province = "Province is required";
+    if (!district) stepErrors.district = "District is required";
+    if (!sector) stepErrors.sector = "Sector is required";
+    if (!cell) stepErrors.cell = "Cell is required";
+    if (!village) stepErrors.village = "Village is required";
+
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const nextStep = () => {
+    if (currentStep === 1 && validateStep1()) {
+      setCurrentStep(2);
+    } else if (currentStep === 2 && validateStep2()) {
+      setCurrentStep(3);
     }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(currentStep - 1);
   };
 
   const renderField = (input: React.ReactNode, errorKey: string) => (
     <div className="flex flex-col">
-      <Errors message={errors[errorKey]} />
       {input}
+      <Errors message={errors[errorKey]} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      
-      <div className="sticky top-0 z-50">
-        <Header
-          isLoggedIn={true} 
-          isLoginPage={false} 
-          username="John Doe" 
-          userRole="USER"
-          handleLogout={() => console.log("Logout")}
-          handleApplicationsClick={() => console.log("Applications")}
-          handleViewOfficers={() => console.log("Officers")}
-        />
-      </div>
-
-    
-      <div className="py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white shadow-lg rounded-2xl p-10">
-            <div className="text-center mb-10">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">Applicant Registration</h1>
-              <p className="text-gray-500">Please fill out all required fields carefully.</p>
+    <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white shadow-lg rounded-2xl p-10">
+          
+          <div className="flex justify-center mb-6">
+            <img 
+              src={rra} 
+              alt="RRA Logo" 
+              className="h-20 object-contain" 
+            />
+          </div>
+          
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Applicant Registration</h1>
+            <p className="text-gray-500">Please fill out all required fields carefully.</p>
+            
+            
+            <div className="flex justify-center mt-6 mb-2">
+              <div className="flex items-center">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 1 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                  1
+                </div>
+                <div className={`w-16 h-1 mx-2 ${currentStep >= 2 ? 'bg-green-600' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                  2
+                </div>
+                <div className={`w-16 h-1 mx-2 ${currentStep >= 3 ? 'bg-green-600' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                  3
+                </div>
+              </div>
             </div>
+            <div className="flex justify-center text-sm text-gray-600">
+              <span className="w-24 text-center">Personal Info</span>
+              <span className="w-24 text-center mx-8">Location</span>
+              <span className="w-24 text-center">Education</span>
+            </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-10">
-              
+          <form onSubmit={handleSubmit} className="space-y-10">
+            
+            {currentStep === 1 && (
               <section>
                 <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
                   Personal Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {renderField(<ApplicantForm label="T-PIN" value={tpin} onChange={(e) => setTpin(e.target.value)} />, 'tpin')}
-                  {renderField(<ApplicantForm label="T-Company" value={tcompany} onChange={(e) => setTcompany(e.target.value)} />, 'tcompany')}
-                  {renderField(<ApplicantForm label="Full Name" value={fullname} onChange={(e) => setFullname(e.target.value)} />, 'fullname')}
-                  {renderField(<ApplicantForm label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />, 'email')}
-                  {renderField(<ApplicantForm label="Phone Number" value={phonenumber} onChange={(e) => setPhoneNumber(e.target.value)} />, 'phonenumber')}
-                  {renderField(<ApplicantForm label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />, 'password')}
+                  {renderField(
+                    <ApplicantForm 
+                      label="T-Company" 
+                      value={tcompany} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTcompany(e.target.value)} 
+                    />, 
+                    'tcompany'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Full Name" 
+                      value={fullname} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullname(e.target.value)} 
+                    />, 
+                    'fullname'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Email" 
+                      type="email"
+                      value={email} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} 
+                    />, 
+                    'email'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Phone Number" 
+                      value={phonenumber} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhoneNumber(e.target.value)} 
+                    />, 
+                    'phonenumber'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Password" 
+                      type="password" 
+                      value={password} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} 
+                    />, 
+                    'password'
+                  )}
+                </div>
+                
+                <div className="mt-8 flex justify-end">
+                  <button 
+                    type="button"
+                    onClick={nextStep}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full transition duration-200 shadow-md"
+                  >
+                    Next
+                  </button>
                 </div>
               </section>
+            )}
 
-          
+            
+            {currentStep === 2 && (
               <section>
                 <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
                   Location Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {renderField(<ApplicantForm label="Province" icon={<RiArrowDropDownLine />} value={province} onChange={(e) => setProvince(e.target.value)} />, 'province')}
-                  {renderField(<ApplicantForm label="District" icon={<RiArrowDropDownLine />} value={district} onChange={(e) => setDistrict(e.target.value)} />, 'district')}
-                  {renderField(<ApplicantForm label="Sector" icon={<RiArrowDropDownLine />} value={sector} onChange={(e) => setSector(e.target.value)} />, 'sector')}
-                  {renderField(<ApplicantForm label="Cell" icon={<RiArrowDropDownLine />} value={cell} onChange={(e) => setCell(e.target.value)} />, 'cell')}
-                  {renderField(<ApplicantForm label="Village" icon={<RiArrowDropDownLine />} value={village} onChange={(e) => setVillage(e.target.value)} />, 'village')}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Province" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={province} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProvince(e.target.value)} 
+                    />, 
+                    'province'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="District" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={district} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistrict(e.target.value)} 
+                    />, 
+                    'district'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Sector" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={sector} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSector(e.target.value)} 
+                    />, 
+                    'sector'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Cell" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={cell} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCell(e.target.value)} 
+                    />, 
+                    'cell'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Village" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={village} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVillage(e.target.value)} 
+                    />, 
+                    'village'
+                  )}
+                </div>
+                
+                <div className="mt-8 flex justify-between">
+                  <button 
+                    type="button"
+                    onClick={prevStep}
+                    className="px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-full transition duration-200 shadow-md"
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={nextStep}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full transition duration-200 shadow-md"
+                  >
+                    Next
+                  </button>
                 </div>
               </section>
+            )}
 
             
+            {currentStep === 3 && (
               <section>
                 <h2 className="text-xl font-bold text-gray-700 mb-5 border-b border-gray-200 pb-2">
                   Education & Other Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {renderField(
-                    <ApplicantForm
-                      label={<span className="flex items-center gap-2"><MdCloudUpload className="text-blue-500 text-2xl" /> Bachelor Degree (Upload)</span>}
-                      type="file"
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        if (files && files.length > 0) setBachelor(files[0]);
-                      }}
-                    />, 
+                    <div className="flex flex-col">
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <MdCloudUpload className="text-blue-500 text-2xl" /> 
+                        Bachelor Degree (Upload)
+                      </label>
+                      <input
+                        type="file"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) setBachelor(files[0]);
+                        }}
+                        className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>, 
                     'bachelor'
                   )}
-                  {renderField(<ApplicantForm label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />, 'date')}
-                  {renderField(<ApplicantForm label="Status" icon={<RiArrowDropDownLine />} value={status} onChange={(e) => setStatus(e.target.value)} />, 'status')}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Date" 
+                      type="date" 
+                      value={date} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} 
+                    />, 
+                    'date'
+                  )}
+                  {renderField(
+                    <ApplicantForm 
+                      label="Status" 
+                      icon={<RiArrowDropDownLine />} 
+                      value={status} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStatus(e.target.value)} 
+                    />, 
+                    'status'
+                  )}
+                </div>
+                
+                <div className="mt-12 flex justify-between">
+                  <button 
+                    type="button"
+                    onClick={prevStep}
+                    className="px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-full transition duration-200 shadow-md"
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    type="submit"
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full transition duration-200 shadow-md"
+                  >
+                    Apply Now
+                  </button>
                 </div>
               </section>
-
-            
-              <div className="mt-12 flex justify-center">
-                <button className="w-full md:w-1/2 py-4 text-lg font-semibold bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-200 shadow-md">
-                  Apply Now
-                </button>
-              </div>
-            </form>
-          </div>
+            )}
+          </form>
         </div>
       </div>
     </div>
