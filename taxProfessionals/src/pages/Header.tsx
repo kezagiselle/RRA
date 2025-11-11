@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaClipboardList, FaUsers, FaUserCircle, FaSignOutAlt } from "react-icons/fa";
-import Logo from "../imgs/RRA-log.png"; 
+import Logo from "../imgs/rra1.png"; 
 
 
 interface HeaderProps {
