@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { FaUser, FaLock } from "react-icons/fa";
 import rra from "../imgs/rra.png";
+import { useNavigate } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,6 +24,11 @@ const LoginPage: React.FC = () => {
         setError("Invalid username or password");
       }
     }, 1000);
+  };
+
+  const handleSignUpClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    navigate("/applicant");
   };
 
   return (
@@ -79,6 +86,7 @@ const LoginPage: React.FC = () => {
             Don't have an account?{" "}
             <a 
               href="/signup" 
+              onClick={handleSignUpClick}
               className="text-blue-400 hover:text-blue-600 font-semibold underline transition duration-200"
             >
               Sign up here

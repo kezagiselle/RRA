@@ -14,7 +14,8 @@ function App() {
    
      <Router>
       <Routes>
-        <Route path="/" element={<ApplicantPage />} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/applicant" element={<ApplicantPage />} />
         <Route path="/success" element={<ApplicantDashboard />} />
       </Routes>
     </Router>
