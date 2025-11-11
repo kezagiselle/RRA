@@ -11,17 +11,13 @@ function App() {
  
 
   return (
-    <>
-    <ApplicantDashboard />
-    {/* <LoginPage /> */}
-    {/* <ApplicantPage /> */}
-    </>
-    // <Router>
-    //   <Routes>
-    //     <Route path="/" element={<ApplicantPage />} />
-    //     <Route path="/success" element={<ApplicantDashboard />} />
-    //   </Routes>
-    // </Router>
+   
+     <Router>
+      <Routes>
+        <Route path="/" element={<ApplicantPage />} />
+        <Route path="/success" element={<ApplicantDashboard />} />
+      </Routes>
+    </Router>
   
  
     
