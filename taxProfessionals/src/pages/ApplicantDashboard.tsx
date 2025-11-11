@@ -1,6 +1,6 @@
 import React from 'react';
-import { FileText, Bell } from 'lucide-react';
-import Header from './Header';
+import { FileText, Bell, LogOut } from 'lucide-react';
+import rra from "../imgs/rra.png";
 
 export default function ApplicantDashboard() {
   const statusCards = [
@@ -14,22 +14,19 @@ export default function ApplicantDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-    
-      <Header 
-        isLoggedIn={true} 
-        isLoginPage={false} 
-        username="John Doe" 
-        userRole="USER"  // changed from "ADMIN" to "USER" so Officers button won't show
-        handleLogout={() => console.log('logout')}
-        handleApplicationsClick={() => console.log('applications clicked')}
-        handleViewOfficers={() => {}}
-      />
-
       <div className="flex mt-4">
     
-        <aside className="w-64 bg-white min-h-screen border-r border-gray-200">
-          <nav className="p-4 space-y-2">
+        <aside className="w-64 bg-white min-h-screen border-r border-gray-200 flex flex-col">
+          {/* RRA Logo at the top */}
+          <div className="p-4 border-b border-gray-200">
+            <img 
+              src={rra} 
+              alt="RRA Logo" 
+              className="h-20 object-contain" 
+            />
+          </div>
+
+          <nav className="p-4 space-y-2 flex-1">
             <button className="w-full flex items-center space-x-3 px-4 py-3 bg-amber-200 rounded-lg text-gray-800">
               <FileText size={20} />
               <span>Overview</span>
@@ -44,6 +41,14 @@ export default function ApplicantDashboard() {
               <span>Notifications</span>
             </button>
           </nav>
+
+          {/* Logout button at the very bottom */}
+          <div className="p-4 border-t border-gray-200 mt-auto">
+            <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition duration-200">
+              <LogOut size={20} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </aside>
 
     
@@ -57,7 +62,7 @@ export default function ApplicantDashboard() {
                   card.highlighted
                     ? 'bg-amber-600 text-white'
                     : 'bg-white text-gray-800'
-                } rounded-lg p-6 shadow-sm text-center border border-gray-200`}
+                } rounded-lg p-6 shadow-sm text-center border border-gray-200 hover:bg-amber-100 hover:border-amber-300 transition duration-200 cursor-pointer`}
               >
                 <div className="text-3xl font-bold mb-2">{card.count}</div>
                 <div className={`text-sm ${card.highlighted ? 'text-white' : 'text-gray-600'}`}>

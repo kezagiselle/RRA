@@ -12,9 +12,9 @@ function App() {
 
   return (
     <>
-    {/* <ApplicantDashboard /> */}
+    <ApplicantDashboard />
     {/* <LoginPage /> */}
-    <ApplicantPage />
+    {/* <ApplicantPage /> */}
     </>
     // <Router>
     //   <Routes>
