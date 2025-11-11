@@ -16,7 +16,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/applicant" element={<ApplicantPage />} />
-        <Route path="/success" element={<ApplicantDashboard />} />
+        <Route path="/success" element={<SuccessfulPage />} />
       </Routes>
     </Router>
   

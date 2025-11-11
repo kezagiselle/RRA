@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import ApplicantForm from '../components/ApplicantForm';
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { MdCloudUpload } from "react-icons/md";
-// import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Errors from '../components/Errors';
-// import Header from './Header';
+
 import rra from "../imgs/rra.png"
 
 function ApplicantPage() {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [tcompany, setTcompany] = useState('');
   const [fullname, setFullname] = useState('');
@@ -51,9 +51,9 @@ function ApplicantPage() {
 
     setErrors(formErrors);
 
-    // if (Object.keys(formErrors).length === 0) {
-    //   navigate("/success");
-    // }
+    if (Object.keys(formErrors).length === 0) {
+      navigate("/success");
+    }
   };
 
   const validateStep1 = () => {

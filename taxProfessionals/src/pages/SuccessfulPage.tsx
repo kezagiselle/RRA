@@ -23,7 +23,7 @@ function SuccessfulPage() {
          
         <button
           onClick={() => navigate("/")}
-          className="bg-blue-600 text-white py-2 px-6 rounded-full font-semibold hover:bg-blue-700 transition duration-200"
+          className="bg-green-600 text-white py-2 px-6 rounded-full font-semibold hover:bg-blue-700 transition duration-200"
         >
           Back to Home
         </button> 
