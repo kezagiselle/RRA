@@ -21,6 +21,7 @@ function ApplicantPage() {
   const [cell, setCell] = useState('');
   const [village, setVillage] = useState('');
   const [bachelor, setBachelor] = useState<File | null>(null);
+  const [professionalDocs, setProfessionalDocs] = useState<FileList | null>(null);
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('');
   const [errors, setErrors] = useState<any>({});
@@ -44,6 +45,7 @@ function ApplicantPage() {
     if (!cell) formErrors.cell = "Cell is required";
     if (!village) formErrors.village = "Village is required";
     if (!bachelor) formErrors.bachelor = "Please upload your Bachelor Degree";
+    if (!professionalDocs || professionalDocs.length === 0) formErrors.professionalDocs = "Please upload professional documents";
     if (!date) formErrors.date = "Date is required";
     if (!status) formErrors.status = "Status is required";
 
@@ -150,7 +152,7 @@ function ApplicantPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {renderField(
                     <ApplicantForm 
-                      label="T-Company" 
+                      label="Tin-Company" 
                       value={tcompany} 
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTcompany(e.target.value)} 
                     />, 
@@ -302,6 +304,24 @@ function ApplicantPage() {
                     'bachelor'
                   )}
                   {renderField(
+                    <div className="flex flex-col">
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <MdCloudUpload className="text-blue-500 text-2xl" /> 
+                        Professional documents (Upload Multiple)
+                      </label>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const files = e.target.files;
+                          setProfessionalDocs(files);
+                        }}
+                        className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>, 
+                    'professionalDocs'
+                  )}
+                  {renderField(
                     <ApplicantForm 
                       label="Date" 
                       type="date" 
@@ -311,12 +331,14 @@ function ApplicantPage() {
                     'date'
                   )}
                   {renderField(
-                    <ApplicantForm 
-                      label="Status" 
-                      icon={<RiArrowDropDownLine />} 
-                      value={status} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStatus(e.target.value)} 
-                    />, 
+                    <div className="md:col-start-2">
+                      <ApplicantForm 
+                        label="Status" 
+                        icon={<RiArrowDropDownLine />} 
+                        value={status} 
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStatus(e.target.value)} 
+                      />
+                    </div>, 
                     'status'
                   )}
                 </div>
