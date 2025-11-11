@@ -60,12 +60,12 @@ export default function ApplicantDashboard() {
                 key={index}
                 className={`${
                   card.highlighted
-                    ? 'bg-amber-600 text-white'
+                    ? 'bg-amber-200 text-gray-800' // Changed from amber-600 to amber-200
                     : 'bg-white text-gray-800'
                 } rounded-lg p-6 shadow-sm text-center border border-gray-200 hover:bg-amber-100 hover:border-amber-300 transition duration-200 cursor-pointer`}
               >
                 <div className="text-3xl font-bold mb-2">{card.count}</div>
-                <div className={`text-sm ${card.highlighted ? 'text-white' : 'text-gray-600'}`}>
+                <div className={`text-sm ${card.highlighted ? 'text-gray-800' : 'text-gray-600'}`}>
                   {card.label}
                 </div>
               </div>
