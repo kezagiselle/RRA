@@ -17,7 +17,6 @@ export default function ApplicantDashboard() {
       <div className="flex mt-4">
     
         <aside className="w-64 bg-white min-h-screen border-r border-gray-200 flex flex-col">
-          {/* RRA Logo at the top */}
           <div className="p-4 border-b border-gray-200">
             <img 
               src={rra} 
@@ -42,7 +41,7 @@ export default function ApplicantDashboard() {
             </button>
           </nav>
 
-          {/* Logout button at the very bottom */}
+        
           <div className="p-4 border-t border-gray-200 mt-auto">
             <button className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition duration-200">
               <LogOut size={20} />
@@ -60,7 +59,7 @@ export default function ApplicantDashboard() {
                 key={index}
                 className={`${
                   card.highlighted
-                    ? 'bg-amber-200 text-gray-800' // Changed from amber-600 to amber-200
+                    ? 'bg-amber-200 text-gray-800' 
                     : 'bg-white text-gray-800'
                 } rounded-lg p-6 shadow-sm text-center border border-gray-200 hover:bg-amber-100 hover:border-amber-300 transition duration-200 cursor-pointer`}
               >
