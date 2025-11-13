@@ -10,12 +10,14 @@ import { getDistrict } from '../services/District';
 import { getSector } from '../services/Sector';
 import { getCell } from '../services/Cell';
 import { getVillage } from '../services/Villages';
+import { addApplicant } from '../services/SignUp';
 
 const SignUpPage: React.FC = () => {
   console.log('SignUpPage: Component rendering');
   
   const [businessStatus, setBusinessStatus] = useState("");
   const [tin, setTin] = useState("");
+  const [nid, setNid] = useState("");
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -315,6 +317,7 @@ const SignUpPage: React.FC = () => {
     
     if (!businessStatus) formErrors.businessStatus = "Business status is required";
     if (!tin.trim()) formErrors.tin = "TIN is required";
+    if (!nid.trim()) formErrors.nid = "National-ID is required";
     if (!fullname.trim()) formErrors.fullname = "Full name is required";
     if (!email.trim()) formErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) formErrors.email = "Email is invalid";
@@ -331,12 +334,122 @@ const SignUpPage: React.FC = () => {
     setErrors(formErrors);
 
     if (Object.keys(formErrors).length === 0) {
-      // Handle successful signup
-      setTimeout(() => {
+      // Get location IDs from selected values
+      const selectedProvince = provincedata.find((p: any) => p.name === province || p.id === province);
+      const selectedDistrict = districtdata.find((d: any) => d.name === district || d.id === district);
+      const selectedSector = sectordata.find((s: any) => s.name === sector || s.id === sector);
+      const selectedCell = celldata.find((c: any) => c.name === cell || c.id === cell);
+      const selectedVillage = villagedata.find((v: any) => v.name === village || v.id === village);
+
+      const provinceId = selectedProvince?.locationId || selectedProvince?.id;
+      const districtId = selectedDistrict?.locationId || selectedDistrict?.id;
+      const sectorId = selectedSector?.locationId || selectedSector?.id;
+      const cellId = selectedCell?.locationId || selectedCell?.id;
+      const villageId = selectedVillage?.locationId || selectedVillage?.id;
+
+      // Validate location IDs
+      if (!provinceId) {
+        setErrors({ ...formErrors, province: "Province ID not found. Please select again." });
         setLoading(false);
-        alert("Sign up successful!");
-        navigate("/");
-      }, 1000);
+        return;
+      }
+      if (!districtId) {
+        setErrors({ ...formErrors, district: "District ID not found. Please select again." });
+        setLoading(false);
+        return;
+      }
+      if (!sectorId) {
+        setErrors({ ...formErrors, sector: "Sector ID not found. Please select again." });
+        setLoading(false);
+        return;
+      }
+      if (!cellId) {
+        setErrors({ ...formErrors, cell: "Cell ID not found. Please select again." });
+        setLoading(false);
+        return;
+      }
+      if (!villageId) {
+        setErrors({ ...formErrors, village: "Village ID not found. Please select again." });
+        setLoading(false);
+        return;
+      }
+
+      // Convert IDs to numbers if they're strings
+      const provinceIdNum = typeof provinceId === 'string' ? parseInt(provinceId, 10) : provinceId;
+      const districtIdNum = typeof districtId === 'string' ? parseInt(districtId, 10) : districtId;
+      const sectorIdNum = typeof sectorId === 'string' ? parseInt(sectorId, 10) : sectorId;
+      const cellIdNum = typeof cellId === 'string' ? parseInt(cellId, 10) : cellId;
+      const villageIdNum = typeof villageId === 'string' ? parseInt(villageId, 10) : villageId;
+
+      // Validate that all IDs are valid numbers
+      if (isNaN(provinceIdNum) || isNaN(districtIdNum) || isNaN(sectorIdNum) || isNaN(cellIdNum) || isNaN(villageIdNum)) {
+        setError("Invalid location IDs. Please select all locations again.");
+        setLoading(false);
+        return;
+      }
+
+      // Prepare data for API
+      const signupData = {
+        tin: tin.trim(),
+        nid: nid.trim(),
+        fullName: fullname.trim(),
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
+        password: password,
+        provinceId: provinceIdNum,
+        districtId: districtIdNum,
+        sectorId: sectorIdNum,
+        cellId: cellIdNum,
+        villageId: villageIdNum
+      };
+
+      console.log('SignUpPage: Submitting signup data:', signupData);
+      console.log('SignUpPage: Location IDs - Province:', provinceIdNum, 'District:', districtIdNum, 'Sector:', sectorIdNum, 'Cell:', cellIdNum, 'Village:', villageIdNum);
+
+      // Call the API
+      addApplicant(signupData)
+        .then((response) => {
+          console.log('SignUpPage: Signup successful:', response);
+          setLoading(false);
+          alert("Sign up successful!");
+          navigate("/");
+        })
+        .catch((error) => {
+          console.error('=== SignUpPage: Signup error ===');
+          console.error('SignUpPage: Error object:', error);
+          console.error('SignUpPage: Error response:', error.response);
+          console.error('SignUpPage: Error response data:', error.response?.data);
+          console.error('SignUpPage: Error response status:', error.response?.status);
+          
+          setLoading(false);
+          
+          // Handle validation errors from backend
+          if (error.response?.data) {
+            const errorData = error.response.data;
+            
+            // If backend returns validation errors in a specific format
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+              const backendErrors: any = {};
+              errorData.errors.forEach((err: any) => {
+                if (err.field) {
+                  backendErrors[err.field] = err.message || err.defaultMessage;
+                }
+              });
+              setErrors(backendErrors);
+              setError(errorData.message || "Validation failed. Please check the form.");
+            } else if (errorData.message) {
+              setError(errorData.message);
+            } else if (typeof errorData === 'string') {
+              setError(errorData);
+            } else {
+              setError(JSON.stringify(errorData));
+            }
+          } else if (error.message) {
+            setError(error.message);
+          } else {
+            setError("Sign up failed. Please try again.");
+          }
+        });
     } else {
       setLoading(false);
     }
@@ -397,6 +510,15 @@ const SignUpPage: React.FC = () => {
                 onChange={(e) => setTin(e.target.value)}
               />,
               'tin'
+            )}
+
+            {renderField(
+              <ApplicantForm
+                label="National-ID"
+                value={nid}
+                onChange={(e) => setNid(e.target.value)}
+              />,
+              'nid'
             )}
 
             {renderField(
