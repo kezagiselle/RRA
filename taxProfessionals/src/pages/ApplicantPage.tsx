@@ -5,16 +5,11 @@ import { MdCloudUpload } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
 import Errors from '../components/Errors';
 import rra from "../imgs/rra.png"
-import { addApplicant } from '../services/Applicant'
+import { getProvince } from '../services/Province';
 
 function ApplicantPage() {
   const navigate = useNavigate();
 
-  const [tcompany, setTcompany] = useState('');
-  const [fullname, setFullname] = useState('');
-  const [email, setEmail] = useState('');
-  const [phonenumber, setPhoneNumber] = useState('');
-  const [password, setPassword] = useState('');
   const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [sector, setSector] = useState('');
@@ -25,14 +20,31 @@ function ApplicantPage() {
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('');
   const [errors, setErrors] = useState<any>({});
-  const [currentStep, setCurrentStep] = useState(1);
-  const [applicant, setApplicant] = useState([])
+  const [currentStep, setCurrentStep] = useState(2);
+  const [provincedata, setProvincedata] = useState<any[]>([])
 
   useEffect(() => {
-     addApplicant().then((response) => {
-      setApplicant(response.data)
+     getProvince().then((response) => {
+      // Handle nested data structure: response.data.data or response.data
+      console.log('Province API Full Response:', response);
+      console.log('Province API Response Data:', response.data);
+      
+      // Try different possible structures
+      let data = [];
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        data = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        data = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // If it's an object, try to find an array property
+        data = Object.values(response.data).find((val: any) => Array.isArray(val)) || [];
+      }
+      
+      console.log('Final Province Data:', data);
+      setProvincedata(data);
      }).catch(error => {
-      console.log(error);
+      console.error('Error fetching provinces:', error);
+      setProvincedata([]);
      })
   }, [])
 
@@ -40,14 +52,6 @@ function ApplicantPage() {
     e.preventDefault();
     const formErrors: any = {};
 
-    if (!tcompany.trim()) formErrors.tcompany = "Company name is required";
-    if (!fullname.trim()) formErrors.fullname = "Full name is required";
-    if (!email.trim()) formErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) formErrors.email = "Email is invalid";
-    if (!phonenumber.trim()) formErrors.phonenumber = "Phone number is required";
-    else if (!/^\+?\d{8,15}$/.test(phonenumber)) formErrors.phonenumber = "Phone number is invalid";
-    if (!password) formErrors.password = "Password is required";
-    else if (password.length < 6) formErrors.password = "Password must be at least 6 characters";
     if (!province) formErrors.province = "Province is required";
     if (!district) formErrors.district = "District is required";
     if (!sector) formErrors.sector = "Sector is required";
@@ -65,21 +69,6 @@ function ApplicantPage() {
     }
   };
 
-  const validateStep1 = () => {
-    const stepErrors: any = {};
-    if (!tcompany.trim()) stepErrors.tcompany = "Company name is required";
-    if (!fullname.trim()) stepErrors.fullname = "Full name is required";
-    if (!email.trim()) stepErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) stepErrors.email = "Email is invalid";
-    if (!phonenumber.trim()) stepErrors.phonenumber = "Phone number is required";
-    else if (!/^\+?\d{8,15}$/.test(phonenumber)) stepErrors.phonenumber = "Phone number is invalid";
-    if (!password) stepErrors.password = "Password is required";
-    else if (password.length < 6) stepErrors.password = "Password must be at least 6 characters";
-
-    setErrors(stepErrors);
-    return Object.keys(stepErrors).length === 0;
-  };
-
   const validateStep2 = () => {
     const stepErrors: any = {};
     if (!province) stepErrors.province = "Province is required";
@@ -93,9 +82,7 @@ function ApplicantPage() {
   };
 
   const nextStep = () => {
-    if (currentStep === 1 && validateStep1()) {
-      setCurrentStep(2);
-    } else if (currentStep === 2 && validateStep2()) {
+    if (currentStep === 2 && validateStep2()) {
       setCurrentStep(3);
     }
   };
@@ -131,91 +118,22 @@ function ApplicantPage() {
             
             <div className="flex justify-center mt-4 sm:mt-6 mb-2">
               <div className="flex items-center">
-                <div className={`flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 rounded-full ${currentStep >= 1 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                  <span className="text-xs sm:text-sm">1</span>
-                </div>
-                <div className={`w-8 sm:w-12 lg:w-16 h-1 mx-1 sm:mx-2 ${currentStep >= 2 ? 'bg-green-600' : 'bg-gray-300'}`}></div>
                 <div className={`flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 rounded-full ${currentStep >= 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                  <span className="text-xs sm:text-sm">2</span>
+                  <span className="text-xs sm:text-sm">1</span>
                 </div>
                 <div className={`w-8 sm:w-12 lg:w-16 h-1 mx-1 sm:mx-2 ${currentStep >= 3 ? 'bg-green-600' : 'bg-gray-300'}`}></div>
                 <div className={`flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 rounded-full ${currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                  <span className="text-xs sm:text-sm">3</span>
+                  <span className="text-xs sm:text-sm">2</span>
                 </div>
               </div>
             </div>
             <div className="flex justify-center text-xs sm:text-sm text-gray-600">
-              <span className="w-16 sm:w-20 lg:w-24 text-center">Personal Info</span>
-              <span className="w-16 sm:w-20 lg:w-24 text-center mx-2 sm:mx-4 lg:mx-8">Location</span>
-              <span className="w-16 sm:w-20 lg:w-24 text-center">Education</span>
+              <span className="w-16 sm:w-20 lg:w-24 text-center">Location</span>
+              <span className="w-16 sm:w-20 lg:w-24 text-center mx-2 sm:mx-4 lg:mx-8">Education</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 lg:space-y-10">
-            
-            {currentStep === 1 && (
-              <section>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-700 mb-4 sm:mb-5 border-b border-gray-200 pb-2">
-                  Personal Information
-                </h2>
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:gap-8">
-                  {renderField(
-                    <ApplicantForm 
-                      label="Tin-Company" 
-                      value={tcompany} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTcompany(e.target.value)} 
-                    />, 
-                    'tcompany'
-                  )}
-                  {renderField(
-                    <ApplicantForm 
-                      label="Full Name" 
-                      value={fullname} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullname(e.target.value)} 
-                      applicantData = {applicant}
-                    />, 
-                    'fullname'
-                  )}
-                  {renderField(
-                    <ApplicantForm 
-                      label="Email" 
-                      type="email"
-                      value={email} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} 
-                    />, 
-                    'email'
-                  )}
-                  {renderField(
-                    <ApplicantForm 
-                      label="Phone Number" 
-                      value={phonenumber} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhoneNumber(e.target.value)} 
-                    />, 
-                    'phonenumber'
-                  )}
-                  {renderField(
-                    <ApplicantForm 
-                      label="Password" 
-                      type="password" 
-                      value={password} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} 
-                    />, 
-                    'password'
-                  )}
-                </div>
-                
-                <div className="mt-6 sm:mt-8 flex justify-end">
-                  <button 
-                    type="button"
-                    onClick={nextStep}
-                    className="w-full sm:w-auto px-6 sm:px-8 py-2 sm:py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-full transition duration-200 shadow-md text-sm sm:text-base"
-                  >
-                    Next
-                  </button>
-                </div>
-              </section>
-            )}
-
             
             {currentStep === 2 && (
               <section>
@@ -228,7 +146,11 @@ function ApplicantPage() {
                       label="Province" 
                       icon={<RiArrowDropDownLine />} 
                       value={province} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProvince(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setProvince(value);
+                      }} 
+                      applicantData={provincedata}
                     />, 
                     'province'
                   )}
@@ -237,7 +159,10 @@ function ApplicantPage() {
                       label="District" 
                       icon={<RiArrowDropDownLine />} 
                       value={district} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDistrict(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setDistrict(value);
+                      }} 
                     />, 
                     'district'
                   )}
@@ -246,7 +171,10 @@ function ApplicantPage() {
                       label="Sector" 
                       icon={<RiArrowDropDownLine />} 
                       value={sector} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSector(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSector(value);
+                      }} 
                     />, 
                     'sector'
                   )}
@@ -255,7 +183,10 @@ function ApplicantPage() {
                       label="Cell" 
                       icon={<RiArrowDropDownLine />} 
                       value={cell} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCell(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCell(value);
+                      }} 
                     />, 
                     'cell'
                   )}
@@ -264,7 +195,10 @@ function ApplicantPage() {
                       label="Village" 
                       icon={<RiArrowDropDownLine />} 
                       value={village} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVillage(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setVillage(value);
+                      }} 
                     />, 
                     'village'
                   )}
@@ -336,7 +270,10 @@ function ApplicantPage() {
                       label="Date" 
                       type="date" 
                       value={date} 
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value)} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setDate(value);
+                      }} 
                     />, 
                     'date'
                   )}
@@ -346,7 +283,10 @@ function ApplicantPage() {
                         label="Status" 
                         icon={<RiArrowDropDownLine />} 
                         value={status} 
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStatus(e.target.value)} 
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setStatus(value);
+                        }} 
                       />
                     </div>, 
                     'status'
