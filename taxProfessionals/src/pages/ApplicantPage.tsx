@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ApplicantForm from '../components/ApplicantForm';
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { MdCloudUpload } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
 import Errors from '../components/Errors';
-
 import rra from "../imgs/rra.png"
+import { addApplicant } from '../services/Applicant'
 
 function ApplicantPage() {
   const navigate = useNavigate();
@@ -26,6 +26,15 @@ function ApplicantPage() {
   const [status, setStatus] = useState('');
   const [errors, setErrors] = useState<any>({});
   const [currentStep, setCurrentStep] = useState(1);
+  const [applicant, setApplicant] = useState([])
+
+  useEffect(() => {
+     addApplicant().then((response) => {
+      setApplicant(response.data)
+     }).catch(error => {
+      console.log(error);
+     })
+  }, [])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -111,7 +120,7 @@ function ApplicantPage() {
             <img 
               src={rra} 
               alt="RRA Logo" 
-              className="h-16 sm:h-18 lg:h-20 object-contain" 
+              className="h-20 sm:h-22 lg:h-28 object-contain" 
             />
           </div>
           
@@ -163,6 +172,7 @@ function ApplicantPage() {
                       label="Full Name" 
                       value={fullname} 
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullname(e.target.value)} 
+                      applicantData = {applicant}
                     />, 
                     'fullname'
                   )}

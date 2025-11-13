@@ -12,6 +12,7 @@ interface InputProps {
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     required?: boolean
     className?: boolean
+    applicantData?: any
 }
 
 function ApplicantForm({label, icon, type, value, onChange,className, placeholder}:InputProps ) {
