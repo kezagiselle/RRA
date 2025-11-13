@@ -6,6 +6,10 @@ import { useNavigate } from "react-router-dom";
 import ApplicantForm from '../components/ApplicantForm';
 import Errors from '../components/Errors';
 import { getProvince } from '../services/Province';
+import { getDistrict } from '../services/District';
+import { getSector } from '../services/Sector';
+import { getCell } from '../services/Cell';
+import { getVillage } from '../services/Villages';
 
 const SignUpPage: React.FC = () => {
   console.log('SignUpPage: Component rendering');
@@ -25,6 +29,10 @@ const SignUpPage: React.FC = () => {
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<any>({});
   const [provincedata, setProvincedata] = useState<any[]>([]);
+  const [districtdata, setDistrictdata] = useState<any[]>([]);
+  const [sectordata, setSectordata] = useState<any[]>([]);
+  const [celldata, setCelldata] = useState<any[]>([]);
+  const [villagedata, setVillagedata] = useState<any[]>([]);
   const navigate = useNavigate();
   
   console.log('SignUpPage: Current state - businessStatus:', businessStatus, 'provincedata:', provincedata);
@@ -92,6 +100,211 @@ const SignUpPage: React.FC = () => {
         setProvincedata([]);
       });
   }, []);
+
+  // Fetch districts when province is selected
+  useEffect(() => {
+    if (!province) {
+      setDistrictdata([]);
+      setDistrict("");
+      return;
+    }
+
+    // Find the province ID from the selected province name
+    const selectedProvince = provincedata.find((p: any) => p.name === province || p.id === province);
+    if (!selectedProvince) {
+      console.warn('SignUpPage: Selected province not found in data');
+      return;
+    }
+
+    const provinceId = selectedProvince.locationId || selectedProvince.id;
+    console.log('SignUpPage: Fetching districts for province:', provinceId);
+
+    getDistrict(provinceId)
+      .then((response) => {
+        let data = [];
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          data = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          const arrayValue = Object.values(response.data).find((val: any) => Array.isArray(val));
+          if (arrayValue) data = arrayValue as any[];
+        }
+        console.log('SignUpPage: Districts fetched:', data);
+        setDistrictdata(data);
+        // Reset dependent fields
+        setDistrict("");
+        setSector("");
+        setCell("");
+        setVillage("");
+        setSectordata([]);
+        setCelldata([]);
+        setVillagedata([]);
+      })
+      .catch(error => {
+        console.error('SignUpPage: Error fetching districts:', error);
+        setDistrictdata([]);
+      });
+  }, [province, provincedata]);
+
+  // Fetch sectors when district is selected
+  useEffect(() => {
+    if (!district) {
+      setSectordata([]);
+      setSector("");
+      return;
+    }
+
+    const selectedDistrict = districtdata.find((d: any) => d.name === district || d.id === district);
+    if (!selectedDistrict) {
+      console.warn('SignUpPage: Selected district not found in data');
+      return;
+    }
+
+    const districtId = selectedDistrict.locationId || selectedDistrict.id;
+    console.log('SignUpPage: Fetching sectors for district:', districtId);
+
+    getSector(districtId)
+      .then((response) => {
+        let data = [];
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          data = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          const arrayValue = Object.values(response.data).find((val: any) => Array.isArray(val));
+          if (arrayValue) data = arrayValue as any[];
+        }
+        console.log('SignUpPage: Sectors fetched:', data);
+        setSectordata(data);
+        // Reset dependent fields
+        setSector("");
+        setCell("");
+        setVillage("");
+        setCelldata([]);
+        setVillagedata([]);
+      })
+      .catch(error => {
+        console.error('SignUpPage: Error fetching sectors:', error);
+        setSectordata([]);
+      });
+  }, [district, districtdata]);
+
+  // Fetch cells when sector is selected
+  useEffect(() => {
+    console.log('SignUpPage: Cell useEffect triggered, sector:', sector, 'sectordata:', sectordata);
+    
+    if (!sector) {
+      console.log('SignUpPage: No sector selected, clearing cell data');
+      setCelldata([]);
+      setCell("");
+      return;
+    }
+
+    const selectedSector = sectordata.find((s: any) => s.name === sector || s.id === sector);
+    if (!selectedSector) {
+      console.warn('SignUpPage: Selected sector not found in data. Sector value:', sector, 'Available sectors:', sectordata);
+      return;
+    }
+
+    const sectorId = selectedSector.locationId || selectedSector.id;
+    console.log('SignUpPage: Fetching cells for sector ID:', sectorId, 'Selected sector:', selectedSector);
+    
+    if (!sectorId) {
+      console.error('SignUpPage: No sectorId found in selected sector:', selectedSector);
+      setCelldata([]);
+      return;
+    }
+
+    // Ensure sectorId is a valid number or string
+    const validSectorId = typeof sectorId === 'number' ? sectorId : (typeof sectorId === 'string' && sectorId.trim() !== '' ? sectorId : null);
+    
+    if (!validSectorId) {
+      console.error('SignUpPage: Invalid sectorId:', sectorId);
+      setCelldata([]);
+      return;
+    }
+
+    console.log('SignUpPage: Calling getCell with sectorId:', validSectorId, 'Type:', typeof validSectorId);
+    console.log('SignUpPage: Full URL will be:', `http://localhost:8080/api/locations/cells/${validSectorId}`);
+    
+    getCell(validSectorId)
+      .then((response) => {
+        console.log('SignUpPage: Cell API response received');
+        console.log('SignUpPage: Response status:', response.status);
+        console.log('SignUpPage: Response data:', response.data);
+        let data = [];
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          data = response.data.data;
+          console.log('SignUpPage: Found data in response.data.data');
+        } else if (Array.isArray(response.data)) {
+          data = response.data;
+          console.log('SignUpPage: response.data is directly an array');
+        } else if (response.data && typeof response.data === 'object') {
+          const arrayValue = Object.values(response.data).find((val: any) => Array.isArray(val));
+          if (arrayValue) {
+            data = arrayValue as any[];
+            console.log('SignUpPage: Found array in response.data object');
+          }
+        }
+        console.log('SignUpPage: Cells fetched successfully:', data);
+        console.log('SignUpPage: Number of cells:', data.length);
+        setCelldata(data);
+        // Reset dependent fields
+        setCell("");
+        setVillage("");
+        setVillagedata([]);
+      })
+      .catch(error => {
+        console.error('=== SignUpPage: Error fetching cells ===');
+        console.error('SignUpPage: Error object:', error);
+        console.error('SignUpPage: Error message:', error.message);
+        console.error('SignUpPage: Error response:', error.response);
+        console.error('SignUpPage: Error response data:', error.response?.data);
+        console.error('SignUpPage: Error response status:', error.response?.status);
+        console.error('SignUpPage: Error response URL:', error.config?.url);
+        console.error('SignUpPage: Full error:', JSON.stringify(error, null, 2));
+        setCelldata([]);
+      });
+  }, [sector, sectordata]);
+
+  // Fetch villages when cell is selected
+  useEffect(() => {
+    if (!cell) {
+      setVillagedata([]);
+      setVillage("");
+      return;
+    }
+
+    const selectedCell = celldata.find((c: any) => c.name === cell || c.id === cell);
+    if (!selectedCell) {
+      console.warn('SignUpPage: Selected cell not found in data');
+      return;
+    }
+
+    const cellId = selectedCell.locationId || selectedCell.id;
+    console.log('SignUpPage: Fetching villages for cell:', cellId);
+
+    getVillage(cellId)
+      .then((response) => {
+        let data = [];
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          data = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          const arrayValue = Object.values(response.data).find((val: any) => Array.isArray(val));
+          if (arrayValue) data = arrayValue as any[];
+        }
+        console.log('SignUpPage: Villages fetched:', data);
+        setVillagedata(data);
+        setVillage("");
+      })
+      .catch(error => {
+        console.error('SignUpPage: Error fetching villages:', error);
+        setVillagedata([]);
+      });
+  }, [cell, celldata]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -249,74 +462,58 @@ const SignUpPage: React.FC = () => {
             )}
 
             {renderField(
-              <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">District</label>
-                <div className="relative">
-                  <select
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="">Select District</option>
-                    {/* Add district options here when API is available */}
-                  </select>
-                  <RiArrowDropDownLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none" />
-                </div>
-              </div>,
+              <ApplicantForm
+                label="District"
+                icon={<RiArrowDropDownLine />}
+                value={district}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDistrict(value);
+                }}
+                applicantData={districtdata}
+              />,
               'district'
             )}
 
             {renderField(
-              <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">Sector</label>
-                <div className="relative">
-                  <select
-                    value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="">Select Sector</option>
-                    {/* Add sector options here when API is available */}
-                  </select>
-                  <RiArrowDropDownLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none" />
-                </div>
-              </div>,
+              <ApplicantForm
+                label="Sector"
+                icon={<RiArrowDropDownLine />}
+                value={sector}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSector(value);
+                }}
+                applicantData={sectordata}
+              />,
               'sector'
             )}
 
             {renderField(
-              <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">Cell</label>
-                <div className="relative">
-                  <select
-                    value={cell}
-                    onChange={(e) => setCell(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="">Select Cell</option>
-                    {/* Add cell options here when API is available */}
-                  </select>
-                  <RiArrowDropDownLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none" />
-                </div>
-              </div>,
+              <ApplicantForm
+                label="Cell"
+                icon={<RiArrowDropDownLine />}
+                value={cell}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCell(value);
+                }}
+                applicantData={celldata}
+              />,
               'cell'
             )}
 
             {renderField(
-              <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">Village</label>
-                <div className="relative">
-                  <select
-                    value={village}
-                    onChange={(e) => setVillage(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="">Select Village</option>
-                    {/* Add village options here when API is available */}
-                  </select>
-                  <RiArrowDropDownLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none" />
-                </div>
-              </div>,
+              <ApplicantForm
+                label="Village"
+                icon={<RiArrowDropDownLine />}
+                value={village}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setVillage(value);
+                }}
+                applicantData={villagedata}
+              />,
               'village'
             )}
 
