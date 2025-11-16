@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { FaUser, FaLock } from "react-icons/fa";
 import rra from "../imgs/rra.png";
 import { useNavigate } from "react-router-dom";
+import { login } from "../services/Login";
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState("");
+  const [tinNumber, setTinNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,15 +16,69 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     setError("");
 
-    
-    setTimeout(() => {
-      setLoading(false);
-      if (username === "admin" && password === "admin123") {
-        alert("Login successful!");
-      } else {
-        setError("Invalid username or password");
-      }
-    }, 1000);
+    // Prepare login data - TIN can be string or number
+    const tin = tinNumber.trim();
+    console.log('LoginPage: Submitting login - TIN:', tin, 'Type:', typeof tin);
+
+    // Call the API
+    login(tin, password)
+      .then((response) => {
+        console.log('LoginPage: Login successful:', response);
+        console.log('LoginPage: Response data:', response.data);
+        console.log('LoginPage: Response headers:', response.headers);
+        
+        // Store TIN number in localStorage for use in other pages
+        localStorage.setItem('tinNumber', tin);
+        
+        // Extract and store authentication token
+        // Try different possible token locations in the response
+        const token = response.data?.token 
+          || response.data?.accessToken 
+          || response.data?.jwt 
+          || response.data?.access_token
+          || response.data?.data?.token
+          || response.data?.data?.accessToken
+          || response.headers?.authorization
+          || response.headers?.Authorization
+          || response.headers?.['authorization']
+          || response.headers?.['Authorization'];
+        
+        console.log('LoginPage: Full response data:', JSON.stringify(response.data, null, 2));
+        console.log('LoginPage: Response headers:', response.headers);
+        console.log('LoginPage: Extracted token:', token ? token.substring(0, 20) + '...' : 'null');
+        
+        if (token) {
+          // Remove 'Bearer ' prefix if present
+          const cleanToken = token.startsWith('Bearer ') ? token.substring(7) : token;
+          localStorage.setItem('authToken', cleanToken);
+          console.log('LoginPage: Token stored successfully in localStorage');
+        } else {
+          console.warn('LoginPage: No token found in response. Please check the response structure.');
+          console.warn('LoginPage: Response data keys:', Object.keys(response.data || {}));
+        }
+        
+        setLoading(false);
+        // Navigate to dashboard on successful login
+        navigate("/dashboard");
+      })
+      .catch((error) => {
+        console.error('LoginPage: Login error:', error);
+        console.error('LoginPage: Error response:', error.response);
+        console.error('LoginPage: Error response data:', error.response?.data);
+        setLoading(false);
+        
+        if (error.response?.data?.message) {
+          setError(error.response.data.message);
+        } else if (error.response?.data) {
+          setError(typeof error.response.data === 'string' 
+            ? error.response.data 
+            : JSON.stringify(error.response.data));
+        } else if (error.message) {
+          setError(error.message);
+        } else {
+          setError("Invalid TIN number or password");
+        }
+      });
   };
 
   const handleSignUpClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -49,9 +104,9 @@ const LoginPage: React.FC = () => {
         <div className="relative">
           <input
             type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your Tin-Number"
+            value={tinNumber}
+            onChange={(e) => setTinNumber(e.target.value)}
             required
             disabled={loading}
             className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"

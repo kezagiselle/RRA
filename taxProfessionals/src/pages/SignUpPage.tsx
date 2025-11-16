@@ -11,6 +11,7 @@ import { getSector } from '../services/Sector';
 import { getCell } from '../services/Cell';
 import { getVillage } from '../services/Villages';
 import { addApplicant } from '../services/SignUp';
+import { addCompany } from '../services/CompanyRegister';
 
 const SignUpPage: React.FC = () => {
   console.log('SignUpPage: Component rendering');
@@ -111,8 +112,8 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-    // Find the province ID from the selected province name
-    const selectedProvince = provincedata.find((p: any) => p.name === province || p.id === province);
+    // Find the province ID from the selected province value (check by ID first, then name)
+    const selectedProvince = provincedata.find((p: any) => p.locationId === province || p.id === province || p.name === province);
     if (!selectedProvince) {
       console.warn('SignUpPage: Selected province not found in data');
       return;
@@ -157,7 +158,7 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-    const selectedDistrict = districtdata.find((d: any) => d.name === district || d.id === district);
+    const selectedDistrict = districtdata.find((d: any) => d.locationId === district || d.id === district || d.name === district);
     if (!selectedDistrict) {
       console.warn('SignUpPage: Selected district not found in data');
       return;
@@ -203,7 +204,7 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-    const selectedSector = sectordata.find((s: any) => s.name === sector || s.id === sector);
+    const selectedSector = sectordata.find((s: any) => s.locationId === sector || s.id === sector || s.name === sector);
     if (!selectedSector) {
       console.warn('SignUpPage: Selected sector not found in data. Sector value:', sector, 'Available sectors:', sectordata);
       return;
@@ -278,7 +279,7 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-    const selectedCell = celldata.find((c: any) => c.name === cell || c.id === cell);
+    const selectedCell = celldata.find((c: any) => c.locationId === cell || c.id === cell || c.name === cell);
     if (!selectedCell) {
       console.warn('SignUpPage: Selected cell not found in data');
       return;
@@ -322,9 +323,12 @@ const SignUpPage: React.FC = () => {
     if (!email.trim()) formErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) formErrors.email = "Email is invalid";
     if (!phoneNumber.trim()) formErrors.phoneNumber = "Phone number is required";
-    else if (!/^\+?\d{8,15}$/.test(phoneNumber)) formErrors.phoneNumber = "Phone number is invalid";
+    else if (!/^\+250\d{9}$/.test(phoneNumber)) formErrors.phoneNumber = "Phone number must be in format +250XXXXXXXXX";
     if (!password) formErrors.password = "Password is required";
-    else if (password.length < 6) formErrors.password = "Password must be at least 6 characters";
+    else if (password.length < 8) formErrors.password = "Password must be at least 8 characters";
+    else if (!/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])/.test(password)) {
+      formErrors.password = "Password must contain digit, lowercase, uppercase, and special character";
+    }
     if (!province) formErrors.province = "Province is required";
     if (!district) formErrors.district = "District is required";
     if (!sector) formErrors.sector = "Sector is required";
@@ -335,11 +339,12 @@ const SignUpPage: React.FC = () => {
 
     if (Object.keys(formErrors).length === 0) {
       // Get location IDs from selected values
-      const selectedProvince = provincedata.find((p: any) => p.name === province || p.id === province);
-      const selectedDistrict = districtdata.find((d: any) => d.name === district || d.id === district);
-      const selectedSector = sectordata.find((s: any) => s.name === sector || s.id === sector);
-      const selectedCell = celldata.find((c: any) => c.name === cell || c.id === cell);
-      const selectedVillage = villagedata.find((v: any) => v.name === village || v.id === village);
+      // Check by ID first (more reliable), then by name
+      const selectedProvince = provincedata.find((p: any) => p.locationId === province || p.id === province || p.name === province);
+      const selectedDistrict = districtdata.find((d: any) => d.locationId === district || d.id === district || d.name === district);
+      const selectedSector = sectordata.find((s: any) => s.locationId === sector || s.id === sector || s.name === sector);
+      const selectedCell = celldata.find((c: any) => c.locationId === cell || c.id === cell || c.name === cell);
+      const selectedVillage = villagedata.find((v: any) => v.locationId === village || v.id === village || v.name === village);
 
       const provinceId = selectedProvince?.locationId || selectedProvince?.id;
       const districtId = selectedDistrict?.locationId || selectedDistrict?.id;
@@ -388,28 +393,66 @@ const SignUpPage: React.FC = () => {
         return;
       }
 
-      // Prepare data for API
-      const signupData = {
-        tin: tin.trim(),
-        nid: nid.trim(),
-        fullName: fullname.trim(),
-        email: email.trim(),
-        phoneNumber: phoneNumber.trim(),
-        password: password,
-        provinceId: provinceIdNum,
-        districtId: districtIdNum,
-        sectorId: sectorIdNum,
-        cellId: cellIdNum,
-        villageId: villageIdNum
-      };
+      // Prepare data for API based on business status
+      let apiCall;
+      
+      if (businessStatus === "Company") {
+        // Company registration structure
+        const companyData = {
+          tinCompany: tin.trim(),
+          employees: [
+            {
+              nid: nid.trim(),
+              fullName: fullname.trim(),
+              email: email.trim(),
+              phoneNumber: phoneNumber.trim(),
+              password: password,
+              provinceId: provinceIdNum,
+              districtId: districtIdNum,
+              sectorId: sectorIdNum,
+              cellId: cellIdNum,
+              villageId: villageIdNum
+            }
+          ]
+        };
 
-      console.log('SignUpPage: Submitting signup data:', signupData);
-      console.log('SignUpPage: Location IDs - Province:', provinceIdNum, 'District:', districtIdNum, 'Sector:', sectorIdNum, 'Cell:', cellIdNum, 'Village:', villageIdNum);
+        console.log('=== SignUpPage: Submitting Company registration ===');
+        console.log('SignUpPage: Business Status:', businessStatus);
+        console.log('SignUpPage: Company data:', JSON.stringify(companyData, null, 2));
+        console.log('SignUpPage: Location IDs - Province:', provinceIdNum, 'District:', districtIdNum, 'Sector:', sectorIdNum, 'Cell:', cellIdNum, 'Village:', villageIdNum);
 
-      // Call the API
-      addApplicant(signupData)
+        apiCall = addCompany(companyData);
+      } else {
+        // Individual registration structure
+        const signupData = {
+          tin: tin.trim(),
+          nid: nid.trim(),
+          fullName: fullname.trim(),
+          email: email.trim(),
+          phoneNumber: phoneNumber.trim(),
+          password: password,
+          provinceId: provinceIdNum,
+          districtId: districtIdNum,
+          sectorId: sectorIdNum,
+          cellId: cellIdNum,
+          villageId: villageIdNum
+        };
+
+        console.log('=== SignUpPage: Submitting Individual signup ===');
+        console.log('SignUpPage: Business Status:', businessStatus);
+        console.log('SignUpPage: Full signup data:', JSON.stringify(signupData, null, 2));
+        console.log('SignUpPage: Location IDs - Province:', provinceIdNum, 'District:', districtIdNum, 'Sector:', sectorIdNum, 'Cell:', cellIdNum, 'Village:', villageIdNum);
+        console.log('SignUpPage: Selected objects - Province:', selectedProvince, 'District:', selectedDistrict, 'Sector:', selectedSector, 'Cell:', selectedCell, 'Village:', selectedVillage);
+
+        apiCall = addApplicant(signupData);
+      }
+
+      // Call the appropriate API
+      apiCall
         .then((response) => {
-          console.log('SignUpPage: Signup successful:', response);
+          console.log('=== SignUpPage: Signup successful ===');
+          console.log('SignUpPage: Response:', response);
+          console.log('SignUpPage: Response data:', response.data);
           setLoading(false);
           alert("Sign up successful!");
           navigate("/");
@@ -420,6 +463,11 @@ const SignUpPage: React.FC = () => {
           console.error('SignUpPage: Error response:', error.response);
           console.error('SignUpPage: Error response data:', error.response?.data);
           console.error('SignUpPage: Error response status:', error.response?.status);
+          console.error('SignUpPage: Error response headers:', error.response?.headers);
+          console.error('SignUpPage: Request config:', error.config);
+          if (error.response?.data) {
+            console.error('SignUpPage: Error response data (stringified):', JSON.stringify(error.response.data, null, 2));
+          }
           
           setLoading(false);
           
@@ -488,11 +536,11 @@ const SignUpPage: React.FC = () => {
               <select
                 value={businessStatus}
                 onChange={(e) => setBusinessStatus(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 sm:py-4 px-4 sm:px-5 pr-10 text-sm sm:text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none appearance-none cursor-pointer"
               >
                 <option value="">Select Business Status</option>
-                <option value="Individual">Individual</option>
-                <option value="Company">Company</option>
+                <option value="Individual">INDIVIDUAL</option>
+                <option value="Company">COMPANY</option>
               </select>
               <RiArrowDropDownLine className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none" />
             </div>

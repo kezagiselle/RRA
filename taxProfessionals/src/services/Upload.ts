@@ -1,0 +1,52 @@
+import axios from 'axios';
+
+const REST_API_BASE_URL = 'http://localhost:8080/api/documents/upload'
+
+export const uploadDocument = (tpin: string | number, file: File, documentType: string) => {
+    const tpinString = String(tpin);
+    
+    // Create FormData with file, tpin, and documentType
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tpin', tpinString);
+    formData.append('documentType', documentType);
+    
+    // Get authentication token from localStorage
+    const token = localStorage.getItem('authToken');
+    
+    console.log('Upload Service: TIN:', tpinString);
+    console.log('Upload Service: Document Type:', documentType);
+    console.log('Upload Service: File Name:', file.name);
+    console.log('Upload Service: Token exists:', !!token);
+    
+    if (!token) {
+        console.error('Upload Service: No authentication token found in localStorage');
+        return Promise.reject(new Error('Authentication token is missing. Please login again.'));
+    }
+    
+    // Build headers
+    const headers: any = {
+        'Accept': 'application/json'
+    };
+    
+    // Add Authorization header with Bearer prefix
+    headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    
+    console.log('Upload Service: Request URL:', REST_API_BASE_URL);
+    console.log('Upload Service: Headers:', { ...headers, Authorization: headers.Authorization?.substring(0, 20) + '...' });
+    
+    // Note: Don't set Content-Type for multipart/form-data, let browser set it with boundary
+    return axios.post(REST_API_BASE_URL, formData, {
+        headers: headers
+    });
+}
+
+export const uploadAllDocuments = (tpin: string | number, files: { file: File, documentType: string }[]) => {
+    // Upload each document separately with tpin, documentType, and file
+    const uploadPromises = files.map(({ file, documentType }) => 
+        uploadDocument(tpin, file, documentType)
+    );
+    
+    // Execute all uploads in parallel
+    return Promise.all(uploadPromises);
+}
