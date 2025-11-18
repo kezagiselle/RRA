@@ -23,12 +23,10 @@ import { determineSignupType } from "../services/SignupType";
 
 interface MemberForm {
   id: string;
-  tin: string;
   nid: string;
   fullName: string;
   email: string;
   phoneNumber: string;
-  password: string;
 }
 
 const SignUpPage: React.FC = () => {
@@ -49,15 +47,14 @@ const SignUpPage: React.FC = () => {
   // Company form state
   const [companyName, setCompanyName] = useState("");
   const [companyTin, setCompanyTin] = useState("");
+  const [companyPassword, setCompanyPassword] = useState("");
   const [members, setMembers] = useState<MemberForm[]>([
     {
       id: Date.now().toString(),
-      tin: "",
       nid: "",
       fullName: "",
       email: "",
       phoneNumber: "",
-      password: "",
     },
   ]);
 
@@ -318,12 +315,10 @@ const SignUpPage: React.FC = () => {
       ...members,
       {
         id: Date.now().toString(),
-        tin: "",
         nid: "",
         fullName: "",
         email: "",
         phoneNumber: "",
-        password: "",
       },
     ]);
   };
@@ -437,23 +432,26 @@ const SignUpPage: React.FC = () => {
     else if (!/^[0-9]{9}$/.test(companyTin.trim()))
       formErrors.companyTin = "Company TIN must be 9 digits";
 
+    if (!companyPassword) formErrors.companyPassword = "Password is required";
+    else if (companyPassword.length < 8)
+      formErrors.companyPassword = "Password must be at least 8 characters";
+    else if (
+      !/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])/.test(
+        companyPassword
+      )
+    ) {
+      formErrors.companyPassword =
+        "Password must contain digit, lowercase, uppercase, and special character";
+    }
+
     if (!province) formErrors.province = "Province is required";
     if (!district) formErrors.district = "District is required";
     if (!sector) formErrors.sector = "Sector is required";
     if (!cell) formErrors.cell = "Cell is required";
     if (!village) formErrors.village = "Village is required";
 
-    // Validate each member
+    // Validate each member (NO TIN, NO password - members share company TIN and password)
     members.forEach((member, index) => {
-      if (!member.tin.trim())
-        formErrors[`member_${index}_tin`] = `Member ${
-          index + 1
-        }: TIN is required`;
-      else if (!/^[0-9]{9}$/.test(member.tin.trim()))
-        formErrors[`member_${index}_tin`] = `Member ${
-          index + 1
-        }: TIN must be 9 digits`;
-
       if (!member.nid.trim())
         formErrors[`member_${index}_nid`] = `Member ${
           index + 1
@@ -489,24 +487,6 @@ const SignUpPage: React.FC = () => {
         formErrors[`member_${index}_phoneNumber`] = `Member ${
           index + 1
         }: Phone number must be in format +250XXXXXXXXX`;
-
-      if (!member.password)
-        formErrors[`member_${index}_password`] = `Member ${
-          index + 1
-        }: Password is required`;
-      else if (member.password.length < 8)
-        formErrors[`member_${index}_password`] = `Member ${
-          index + 1
-        }: Password must be at least 8 characters`;
-      else if (
-        !/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])/.test(
-          member.password
-        )
-      ) {
-        formErrors[`member_${index}_password`] = `Member ${
-          index + 1
-        }: Password must contain digit, lowercase, uppercase, and special character`;
-      }
     });
 
     return formErrors;
@@ -653,29 +633,23 @@ const SignUpPage: React.FC = () => {
         return;
       }
 
-      // Prepare company data
+      // Prepare company data (members share TIN, password, and location - only member-specific fields in applicants)
       const companyData = {
+        companyTin: companyTin.trim(),
         companyName: companyName.trim(),
+        password: companyPassword, // Shared password for all members
+        numberOfApplicants: members.length,
         provinceId: locationIds.provinceId,
         districtId: locationIds.districtId,
         sectorId: locationIds.sectorId,
         cellId: locationIds.cellId,
         villageId: locationIds.villageId,
-        companyTin: companyTin.trim(),
-        numberOfApplicants: members.length,
         applicants: members.map((member) => ({
-          tin: member.tin.trim(),
+          // Only member-specific fields - NO TIN, NO password, NO location fields
           nid: member.nid.trim(),
           fullName: member.fullName.trim(),
           email: member.email.trim(),
           phoneNumber: member.phoneNumber.trim(),
-          password: member.password,
-          // All members use the same location as the company
-          provinceId: locationIds.provinceId,
-          districtId: locationIds.districtId,
-          sectorId: locationIds.sectorId,
-          cellId: locationIds.cellId,
-          villageId: locationIds.villageId,
         })),
       };
 
@@ -1072,6 +1046,18 @@ const SignUpPage: React.FC = () => {
                 "companyTin"
               )}
 
+              {renderField(
+                <ApplicantForm
+                  label="Password (Shared by all members)"
+                  type="password"
+                  icon={<FaLock />}
+                  value={companyPassword}
+                  onChange={(e) => setCompanyPassword(e.target.value)}
+                  placeholder="Enter password (shared by all members)"
+                />,
+                "companyPassword"
+              )}
+
               <div className="border-t pt-4 mt-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">
                   Company Location (Shared by all members)
@@ -1114,18 +1100,6 @@ const SignUpPage: React.FC = () => {
                       </button>
                     )}
                   </div>
-
-                  {renderField(
-                    <ApplicantForm
-                      label="TIN"
-                      value={member.tin}
-                      onChange={(e) =>
-                        updateMember(member.id, "tin", e.target.value)
-                      }
-                      placeholder="Enter 9-digit TIN"
-                    />,
-                    `member_${index}_tin`
-                  )}
 
                   {renderField(
                     <ApplicantForm
@@ -1177,20 +1151,6 @@ const SignUpPage: React.FC = () => {
                       placeholder="+250XXXXXXXXX"
                     />,
                     `member_${index}_phoneNumber`
-                  )}
-
-                  {renderField(
-                    <ApplicantForm
-                      label="Password"
-                      type="password"
-                      icon={<FaLock />}
-                      value={member.password}
-                      onChange={(e) =>
-                        updateMember(member.id, "password", e.target.value)
-                      }
-                      placeholder="Enter password"
-                    />,
-                    `member_${index}_password`
                   )}
                 </div>
               ))}
