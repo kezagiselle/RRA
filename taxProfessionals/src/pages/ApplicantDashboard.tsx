@@ -31,7 +31,10 @@ import { updateDocument } from "../services/updateDocument";
 import type { Application } from "../types/application";
 import { ApplicationStatus } from "../types/application";
 import type { Document as DocumentType } from "../types/document";
-import { DOCUMENT_TYPE_LABELS } from "../types/document";
+import {
+  DOCUMENT_TYPE_LABELS,
+  DocumentType as DocTypeEnum,
+} from "../types/document";
 
 import StatusBadge from "../components/StatusBadge";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -334,6 +337,28 @@ export default function ApplicantDashboard() {
     } catch {
       return "Invalid Date";
     }
+  };
+
+  const getDocumentLabel = (doc: DocumentType): string => {
+    // Check if this is an education certificate with certificateType metadata
+    if (doc.documentType === DocTypeEnum.EDUCERTIFICATE) {
+      if (doc.certificateType === "BACHELOR") {
+        return "Bachelor's Degree Certificate";
+      }
+      if (doc.certificateType === "PROFESSIONAL_QUALIFICATION") {
+        return "Professional Qualification Certificate";
+      }
+      if (doc.certificateType === "MASTERS") {
+        return "Master's Degree Certificate";
+      }
+      // Default to "Education Certificate" if no certificateType
+      return "Education Certificate";
+    }
+
+    // For all other document types, use the standard labels
+    return DOCUMENT_TYPE_LABELS[
+      doc.documentType as keyof typeof DOCUMENT_TYPE_LABELS
+    ];
   };
 
   if (loading) {
@@ -770,7 +795,7 @@ export default function ApplicantDashboard() {
                             className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                           >
                             <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                              {DOCUMENT_TYPE_LABELS[doc.documentType]}
+                              {getDocumentLabel(doc)}
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-600">
                               {formatDateTime(doc.uploadedAt)}

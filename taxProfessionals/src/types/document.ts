@@ -18,6 +18,12 @@ export interface Document {
   filePath: string;
   uploadedAt: string;
   isVerified: boolean;
+  // Optional metadata fields for education certificates
+  certificateType?: "BACHELOR" | "PROFESSIONAL_QUALIFICATION" | "MASTERS";
+  bachelorDegree?: string;
+  professionalQualification?: string;
+  otherProfessionalQualification?: string;
+  mastersDegreeName?: string;
 }
 
 export interface ApiResponse<T> {

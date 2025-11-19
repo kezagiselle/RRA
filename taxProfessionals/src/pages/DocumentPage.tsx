@@ -8,14 +8,17 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { uploadAllDocuments } from "../services/Upload";
 import { getCurrentUser } from "../services/getCurrentUser";
 import type { Application } from "../types/application";
-import { ApplicationStatus } from "../types/application";
+import {
+  ApplicationStatus,
+  BachelorDegree,
+  ProfessionalQualification,
+} from "../types/application";
 
 const DocumentPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [signedLetter, setSignedLetter] = useState<File | null>(null);
   const [criminalRecord, setCriminalRecord] = useState<File | null>(null);
-  const [eduCertificate, setEduCertificate] = useState<File | null>(null);
   const [recommendationLetter, setRecommendationLetter] = useState<File | null>(
     null
   );
@@ -23,6 +26,22 @@ const DocumentPage: React.FC = () => {
   const [cv, setCv] = useState<File | null>(null);
   const [taxClearanceCert, setTaxClearanceCert] = useState<File | null>(null);
   const [businessRegCert, setBusinessRegCert] = useState<File | null>(null);
+
+  // Education and Qualification fields
+  const [bachelorDegree, setBachelorDegree] = useState<BachelorDegree | null>(
+    null
+  );
+  const [bachelorDegreeFile, setBachelorDegreeFile] = useState<File | null>(
+    null
+  );
+  const [mastersDegreeName, setMastersDegreeName] = useState<string>("");
+  const [mastersDegreeFile, setMastersDegreeFile] = useState<File | null>(null);
+  const [professionalQualification, setProfessionalQualification] =
+    useState<ProfessionalQualification | null>(null);
+  const [professionalQualificationFile, setProfessionalQualificationFile] =
+    useState<File | null>(null);
+  const [otherProfessionalQualification, setOtherProfessionalQualification] =
+    useState<string>("");
 
   const [errors, setErrors] = useState<any>({});
   const [loading, setLoading] = useState(false);
@@ -143,8 +162,6 @@ const DocumentPage: React.FC = () => {
     if (!signedLetter) formErrors.signedLetter = "Signed Letter is required";
     if (!criminalRecord)
       formErrors.criminalRecord = "Criminal Record is required";
-    if (!eduCertificate)
-      formErrors.eduCertificate = "Education Certificate is required";
     if (!recommendationLetter)
       formErrors.recommendationLetter = "Recommendation Letter is required";
     if (!nonRefundFees)
@@ -155,6 +172,39 @@ const DocumentPage: React.FC = () => {
     if (!businessRegCert)
       formErrors.businessRegCert =
         "Business Registration Certificate is required";
+
+    // Education and Qualification validation
+    if (!bachelorDegree)
+      formErrors.bachelorDegree = "Bachelor's Degree is required";
+    if (!bachelorDegreeFile)
+      formErrors.bachelorDegreeFile =
+        "Bachelor's Degree certificate is required";
+
+    if (!professionalQualification)
+      formErrors.professionalQualification =
+        "Professional Qualification is required";
+    if (!professionalQualificationFile)
+      formErrors.professionalQualificationFile =
+        "Professional Qualification certificate is required";
+
+    // If Professional Qualification is OTHER, require the text field
+    if (
+      professionalQualification === ProfessionalQualification.OTHER &&
+      !otherProfessionalQualification.trim()
+    ) {
+      formErrors.otherProfessionalQualification =
+        "Please specify your professional qualification";
+    }
+
+    // Master's degree validation: if name is provided, file should also be provided (and vice versa)
+    if (mastersDegreeName && !mastersDegreeFile) {
+      formErrors.mastersDegreeFile =
+        "Please upload Master's degree certificate if you have entered a degree name";
+    }
+    if (mastersDegreeFile && !mastersDegreeName.trim()) {
+      formErrors.mastersDegreeName =
+        "Please enter Master's degree name if you have uploaded a certificate";
+    }
 
     // Check for TIN number and authentication token
     if (!tinNumber) {
@@ -180,16 +230,82 @@ const DocumentPage: React.FC = () => {
 
     if (Object.keys(formErrors).length === 0) {
       // Define document types mapping
-      const documents = [
+      const documents: Array<{
+        file: File;
+        documentType: string;
+        additionalFields?: Record<string, string | File>;
+      }> = [
         { file: signedLetter!, documentType: "SIGNEDLETTER" },
         { file: criminalRecord!, documentType: "CRIMINALRECORD" },
-        { file: eduCertificate!, documentType: "EDUCERTIFICATE" },
         { file: recommendationLetter!, documentType: "RECOMMENDATIONLETTER" },
         { file: nonRefundFees!, documentType: "NONREFUNDFEES" },
         { file: cv!, documentType: "CV" },
         { file: taxClearanceCert!, documentType: "TAXCLEARANCECERTIFICATE" },
         { file: businessRegCert!, documentType: "BUSINESSREGISTRATIONCERT" },
       ];
+
+      // Upload Bachelor's Degree Certificate with all education metadata
+      if (bachelorDegreeFile) {
+        const bachelorFields: Record<string, string> = {
+          certificateType: "BACHELOR",
+          bachelorDegree: bachelorDegree!,
+        };
+
+        // Include professional qualification metadata
+        if (professionalQualification) {
+          bachelorFields.professionalQualification = professionalQualification;
+        }
+        if (
+          professionalQualification === ProfessionalQualification.OTHER &&
+          otherProfessionalQualification.trim()
+        ) {
+          bachelorFields.otherProfessionalQualification =
+            otherProfessionalQualification.trim();
+        }
+
+        // Include master's degree metadata if provided
+        if (mastersDegreeName.trim()) {
+          bachelorFields.mastersDegreeName = mastersDegreeName.trim();
+        }
+
+        documents.push({
+          file: bachelorDegreeFile,
+          documentType: "EDUCERTIFICATE",
+          additionalFields: bachelorFields,
+        });
+      }
+
+      // Upload Professional Qualification Certificate as separate document
+      if (professionalQualificationFile) {
+        const profQualFields: Record<string, string> = {
+          certificateType: "PROFESSIONAL_QUALIFICATION",
+          professionalQualification: professionalQualification!,
+        };
+        if (
+          professionalQualification === ProfessionalQualification.OTHER &&
+          otherProfessionalQualification.trim()
+        ) {
+          profQualFields.otherProfessionalQualification =
+            otherProfessionalQualification.trim();
+        }
+        documents.push({
+          file: professionalQualificationFile,
+          documentType: "EDUCERTIFICATE",
+          additionalFields: profQualFields,
+        });
+      }
+
+      // Upload Master's Degree Certificate as separate document
+      if (mastersDegreeFile && mastersDegreeName.trim()) {
+        documents.push({
+          file: mastersDegreeFile,
+          documentType: "EDUCERTIFICATE",
+          additionalFields: {
+            certificateType: "MASTERS",
+            mastersDegreeName: mastersDegreeName.trim(),
+          },
+        });
+      }
 
       console.log("DocumentPage: Uploading all documents");
       console.log("DocumentPage: TIN:", tinNumber);
@@ -274,6 +390,13 @@ const DocumentPage: React.FC = () => {
       <Errors message={errors[errorKey]} />
     </div>
   );
+
+  const getEnumLabel = (value: string): string => {
+    return value
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
 
   // Show loading while checking status
   if (checkingStatus) {
@@ -457,13 +580,198 @@ const DocumentPage: React.FC = () => {
                 <MdCloudUpload className="text-blue-500 text-xl sm:text-2xl" />
               )}
 
-              {renderFileField(
-                "Education Certificate",
-                eduCertificate,
-                (e) => handleFileChange(e, setEduCertificate, "eduCertificate"),
-                "eduCertificate",
-                <MdCloudUpload className="text-blue-500 text-xl sm:text-2xl" />
-              )}
+              {/* Education & Qualifications Section */}
+              <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">
+                  Education & Qualifications
+                </h3>
+
+                {/* Bachelor's Degree - Required */}
+                <div className="mb-4 sm:mb-6">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Bachelor's Degree <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={bachelorDegree || ""}
+                    onChange={(e) =>
+                      setBachelorDegree(e.target.value as BachelorDegree | null)
+                    }
+                    disabled={loading || checkingStatus}
+                    className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Bachelor's Degree</option>
+                    {Object.values(BachelorDegree).map((degree) => (
+                      <option key={degree} value={degree}>
+                        {getEnumLabel(degree)}
+                      </option>
+                    ))}
+                  </select>
+                  <Errors message={errors.bachelorDegree} />
+                </div>
+
+                {/* Bachelor's Degree Certificate Upload - Required */}
+                {bachelorDegree && (
+                  <div className="mb-4 sm:mb-6">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Bachelor's Degree Certificate{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(e) =>
+                        handleFileChange(
+                          e,
+                          setBachelorDegreeFile,
+                          "bachelorDegreeFile"
+                        )
+                      }
+                      disabled={loading || checkingStatus}
+                      className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {bachelorDegreeFile && (
+                      <p className="text-xs sm:text-sm text-green-600 mt-1 break-words">
+                        Selected: {bachelorDegreeFile.name}
+                      </p>
+                    )}
+                    <Errors message={errors.bachelorDegreeFile} />
+                  </div>
+                )}
+
+                {/* Master's Degree - Optional */}
+                <div className="mb-4 sm:mb-6">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Master's Degree{" "}
+                    <span className="text-gray-500">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={mastersDegreeName}
+                    onChange={(e) => setMastersDegreeName(e.target.value)}
+                    placeholder="Enter Master's degree name (e.g., Master of Business Administration)"
+                    disabled={loading || checkingStatus}
+                    className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <Errors message={errors.mastersDegreeName} />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If you have a Master's degree, enter the degree name and
+                    upload the certificate below.
+                  </p>
+                </div>
+
+                {/* Master's Degree Certificate Upload - Optional */}
+                <div className="mb-4 sm:mb-6">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Master's Degree Certificate{" "}
+                    <span className="text-gray-500">(Optional)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={(e) =>
+                      handleFileChange(
+                        e,
+                        setMastersDegreeFile,
+                        "mastersDegreeFile"
+                      )
+                    }
+                    disabled={loading || checkingStatus}
+                    className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {mastersDegreeFile && (
+                    <p className="text-xs sm:text-sm text-green-600 mt-1 break-words">
+                      Selected: {mastersDegreeFile.name}
+                    </p>
+                  )}
+                  <Errors message={errors.mastersDegreeFile} />
+                  {mastersDegreeFile && !mastersDegreeName.trim() && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      Please enter the Master's degree name above.
+                    </p>
+                  )}
+                </div>
+
+                {/* Professional Qualification - Required */}
+                <div className="mb-4 sm:mb-6">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Professional Qualification{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={professionalQualification || ""}
+                    onChange={(e) => {
+                      const value = e.target
+                        .value as ProfessionalQualification | null;
+                      setProfessionalQualification(value);
+                      // Clear other professional qualification if not OTHER
+                      if (value !== ProfessionalQualification.OTHER) {
+                        setOtherProfessionalQualification("");
+                      }
+                    }}
+                    disabled={loading || checkingStatus}
+                    className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Professional Qualification</option>
+                    {Object.values(ProfessionalQualification).map((qual) => (
+                      <option key={qual} value={qual}>
+                        {qual}
+                      </option>
+                    ))}
+                  </select>
+                  <Errors message={errors.professionalQualification} />
+                </div>
+
+                {/* Other Professional Qualification - Required if OTHER is selected */}
+                {professionalQualification ===
+                  ProfessionalQualification.OTHER && (
+                  <div className="mb-4 sm:mb-6">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Specify Professional Qualification{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={otherProfessionalQualification}
+                      onChange={(e) =>
+                        setOtherProfessionalQualification(e.target.value)
+                      }
+                      placeholder="Enter your professional qualification (e.g., CIMA, CGA, etc.)"
+                      disabled={loading || checkingStatus}
+                      className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <Errors message={errors.otherProfessionalQualification} />
+                  </div>
+                )}
+
+                {/* Professional Qualification Certificate Upload - Required */}
+                {professionalQualification && (
+                  <div className="mb-4 sm:mb-6">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Professional Qualification Certificate{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(e) =>
+                        handleFileChange(
+                          e,
+                          setProfessionalQualificationFile,
+                          "professionalQualificationFile"
+                        )
+                      }
+                      disabled={loading || checkingStatus}
+                      className="w-full border border-gray-300 rounded-lg py-2 sm:py-3 px-3 sm:px-4 text-gray-700 text-xs sm:text-sm lg:text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {professionalQualificationFile && (
+                      <p className="text-xs sm:text-sm text-green-600 mt-1 break-words">
+                        Selected: {professionalQualificationFile.name}
+                      </p>
+                    )}
+                    <Errors message={errors.professionalQualificationFile} />
+                  </div>
+                )}
+              </div>
 
               {renderFileField(
                 "Recommendation Letter",
