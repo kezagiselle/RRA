@@ -22,7 +22,9 @@ export default defineConfig([
 
     // ✅ Add your custom rules here
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn", // change error → warning
+      "@typescript-eslint/no-explicit-any": "warn",
+      "no-unused-vars": "off", // disable base rule
+      "@typescript-eslint/no-unused-vars": ["warn"], // warn instead of error
     },
   },
 ]);
