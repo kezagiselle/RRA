@@ -17,6 +17,7 @@ import {
   GraduationCap,
   Award,
   MapPin,
+  Upload,
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
@@ -34,6 +35,7 @@ export default function ProfilePage() {
   const [application, setApplication] = useState<Application | null>(null);
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
@@ -84,6 +86,8 @@ export default function ProfilePage() {
       if (!application) return;
 
       try {
+        setDocumentsLoading(true);
+
         const response = await getAllDocuments(application.tpin);
         console.log("ProfilePage: Documents data:", response.data);
 
@@ -91,6 +95,8 @@ export default function ProfilePage() {
       } catch (err: any) {
         console.error("ProfilePage: Error fetching documents:", err);
         // Don't show error toast for documents, just log it
+      } finally {
+        setDocumentsLoading(false);
       }
     };
 
@@ -173,6 +179,12 @@ export default function ProfilePage() {
     );
   }
 
+  // Check if user can upload documents (PENDING with no docs OR REJECTED)
+  const canUploadDocuments =
+    (documents.length === 0 &&
+      application.status === ApplicationStatus.PENDING) ||
+    application.status === ApplicationStatus.REJECTED;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
@@ -223,24 +235,19 @@ export default function ProfilePage() {
               <span>Profile</span>
             </button>
 
-            {documents.length === 0 &&
-              application.status === ApplicationStatus.PENDING && (
-                <button
-                  onClick={() => navigate("/documents")}
-                  className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <FileText size={20} />
-                  <span>Upload Documents</span>
-                </button>
-              )}
-
-            <button
-              onClick={() => navigate("/company")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Building2 size={20} />
-              <span>Apply for Company</span>
-            </button>
+            {canUploadDocuments && (
+              <button
+                onClick={() => navigate("/documents")}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Upload size={20} />
+                <span>
+                  {application.status === ApplicationStatus.REJECTED
+                    ? "Reapply - Upload Documents"
+                    : "Upload Documents"}
+                </span>
+              </button>
+            )}
           </nav>
 
           {/* Logout */}

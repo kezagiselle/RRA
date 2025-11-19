@@ -17,8 +17,8 @@ import {
   Mail,
   Phone,
   Calendar,
-  Building2,
   AlertTriangle,
+  Upload,
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
@@ -37,8 +37,6 @@ import StatusBadge from "../components/StatusBadge";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Toast from "../components/Toast";
 import type { ToastType } from "../components/Toast";
-
-// ... rest of the file remains the same
 
 interface ToastState {
   show: boolean;
@@ -148,6 +146,11 @@ export default function ApplicantDashboard() {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleReapply = () => {
+    // Navigate to document upload page for reapplication
+    navigate("/documents");
   };
 
   const handleDownloadCertificate = async () => {
@@ -363,6 +366,12 @@ export default function ApplicantDashboard() {
     );
   }
 
+  // Check if user can upload documents (PENDING with no docs OR REJECTED)
+  const canUploadDocuments =
+    (documents.length === 0 &&
+      application.status === ApplicationStatus.PENDING) ||
+    application.status === ApplicationStatus.REJECTED;
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Mobile Header */}
@@ -417,16 +426,19 @@ export default function ApplicantDashboard() {
               <span>Profile</span>
             </button>
 
-            {documents.length === 0 &&
-              application.status === ApplicationStatus.PENDING && (
-                <button
-                  onClick={() => navigate("/documents")}
-                  className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <FileText size={20} />
-                  <span>Upload Documents</span>
-                </button>
-              )}
+            {canUploadDocuments && (
+              <button
+                onClick={() => navigate("/documents")}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Upload size={20} />
+                <span>
+                  {application.status === ApplicationStatus.REJECTED
+                    ? "Reapply - Upload Documents"
+                    : "Upload Documents"}
+                </span>
+              </button>
+            )}
           </nav>
 
           {/* Logout */}
@@ -648,8 +660,8 @@ export default function ApplicantDashboard() {
                         <XCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3" />
                         <p className="text-sm text-red-800">
                           Your application has been rejected. Please review the
-                          reason below and consider reapplying after addressing
-                          the issues.
+                          reason below and you can reapply by uploading new
+                          documents.
                         </p>
                       </div>
                     </div>
@@ -669,11 +681,11 @@ export default function ApplicantDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex justify-center">
+                    <div className="flex flex-col sm:flex-row justify-center gap-4">
                       <button
                         onClick={handleDownloadCertificate}
                         disabled={downloadingCertificate}
-                        className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                        className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
                       >
                         {downloadingCertificate ? (
                           <>
@@ -686,6 +698,14 @@ export default function ApplicantDashboard() {
                             <span>Download Rejection Letter</span>
                           </>
                         )}
+                      </button>
+
+                      <button
+                        onClick={handleReapply}
+                        className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                      >
+                        <RefreshCw size={20} />
+                        <span>Reapply with New Documents</span>
                       </button>
                     </div>
                   </>
@@ -712,12 +732,16 @@ export default function ApplicantDashboard() {
                     <p className="text-gray-500 mb-4">
                       No documents uploaded yet.
                     </p>
-                    <button
-                      onClick={() => navigate("/documents")}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
-                    >
-                      Upload Documents
-                    </button>
+                    {canUploadDocuments && (
+                      <button
+                        onClick={() => navigate("/documents")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+                      >
+                        {application.status === ApplicationStatus.REJECTED
+                          ? "Reapply - Upload Documents"
+                          : "Upload Documents"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -729,9 +753,6 @@ export default function ApplicantDashboard() {
                           </th>
                           <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">
                             Upload Date
-                          </th>
-                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">
-                            Status
                           </th>
                           <th className="text-center px-4 py-3 text-sm font-semibold text-gray-700">
                             Actions
@@ -749,19 +770,6 @@ export default function ApplicantDashboard() {
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-600">
                               {formatDateTime(doc.uploadedAt)}
-                            </td>
-                            <td className="px-4 py-4">
-                              {doc.isVerified ? (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Verified
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  Pending Verification
-                                </span>
-                              )}
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex items-center justify-center space-x-2">
@@ -804,27 +812,30 @@ export default function ApplicantDashboard() {
                                   )}
                                 </button>
 
-                                <button
-                                  onClick={() =>
-                                    handleReplaceDocument(
-                                      doc.docId,
-                                      doc.documentType
-                                    )
-                                  }
-                                  disabled={
-                                    processingDocId === doc.docId &&
-                                    actionType === "replace"
-                                  }
-                                  className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                                  title="Replace document"
-                                >
-                                  {processingDocId === doc.docId &&
-                                  actionType === "replace" ? (
-                                    <LoadingSpinner size="sm" />
-                                  ) : (
-                                    <RefreshCw size={16} />
-                                  )}
-                                </button>
+                                {application.status !==
+                                  ApplicationStatus.APPROVED && (
+                                  <button
+                                    onClick={() =>
+                                      handleReplaceDocument(
+                                        doc.docId,
+                                        doc.documentType
+                                      )
+                                    }
+                                    disabled={
+                                      processingDocId === doc.docId &&
+                                      actionType === "replace"
+                                    }
+                                    className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    title="Replace document"
+                                  >
+                                    {processingDocId === doc.docId &&
+                                    actionType === "replace" ? (
+                                      <LoadingSpinner size="sm" />
+                                    ) : (
+                                      <RefreshCw size={16} />
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
