@@ -1,6 +1,6 @@
 // src/pages/ApplicantDashboard.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -65,6 +65,7 @@ export default function ApplicantDashboard() {
   >(null);
 
   const navigate = useNavigate();
+  const mainContentRef = useRef<HTMLElement>(null);
 
   // Fetch application data on component mount
   useEffect(() => {
@@ -140,6 +141,13 @@ export default function ApplicantDashboard() {
     localStorage.removeItem("authToken");
     localStorage.removeItem("tinNumber");
     navigate("/");
+  };
+
+  const handleLogoClick = () => {
+    // Scroll main content to top
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleDownloadCertificate = async () => {
@@ -382,13 +390,17 @@ export default function ApplicantDashboard() {
           `}
         >
           {/* Logo */}
-          <div className="p-6 border-b border-gray-200">
+          <button
+            onClick={handleLogoClick}
+            className="p-6 border-b border-gray-200 w-full hover:bg-gray-50 transition-colors cursor-pointer"
+            aria-label="Scroll to top"
+          >
             <img
               src={rra}
               alt="RRA Logo"
               className="h-24 object-contain mx-auto"
             />
-          </div>
+          </button>
 
           {/* Navigation */}
           <nav className="p-4 space-y-2 flex-1">
@@ -415,14 +427,6 @@ export default function ApplicantDashboard() {
                   <span>Upload Documents</span>
                 </button>
               )}
-
-            <button
-              onClick={() => navigate("/company")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Building2 size={20} />
-              <span>Apply for Company</span>
-            </button>
           </nav>
 
           {/* Logout */}
@@ -446,7 +450,10 @@ export default function ApplicantDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8 w-full overflow-y-auto overflow-x-hidden">
+        <main
+          ref={mainContentRef}
+          className="flex-1 p-4 lg:p-8 w-full overflow-y-auto overflow-x-hidden"
+        >
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Welcome Message */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
