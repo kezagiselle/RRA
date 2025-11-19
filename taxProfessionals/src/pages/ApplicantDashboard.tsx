@@ -405,13 +405,16 @@ export default function ApplicantDashboard() {
               <span>Profile</span>
             </button>
 
-            <button
-              onClick={() => navigate("/documents")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <FileText size={20} />
-              <span>Upload Documents</span>
-            </button>
+            {documents.length === 0 &&
+              application.status === ApplicationStatus.PENDING && (
+                <button
+                  onClick={() => navigate("/documents")}
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FileText size={20} />
+                  <span>Upload Documents</span>
+                </button>
+              )}
 
             <button
               onClick={() => navigate("/company")}

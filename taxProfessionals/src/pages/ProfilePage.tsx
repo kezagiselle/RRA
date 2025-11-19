@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
+import { getAllDocuments } from "../services/getDocuments";
 
 import type { Application } from "../types/application";
 import { ApplicationStatus, BusinessStatus } from "../types/application";
+import type { Document as DocumentType } from "../types/document";
 
 import StatusBadge from "../components/StatusBadge";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -30,6 +32,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 export default function ProfilePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [application, setApplication] = useState<Application | null>(null);
+  const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +77,25 @@ export default function ProfilePage() {
 
     fetchApplicationData();
   }, [navigate]);
+
+  // Fetch documents data
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!application) return;
+
+      try {
+        const response = await getAllDocuments(application.tpin);
+        console.log("ProfilePage: Documents data:", response.data);
+
+        setDocuments(response.data.data || []);
+      } catch (err: any) {
+        console.error("ProfilePage: Error fetching documents:", err);
+        // Don't show error toast for documents, just log it
+      }
+    };
+
+    fetchDocuments();
+  }, [application]);
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -201,13 +223,16 @@ export default function ProfilePage() {
               <span>Profile</span>
             </button>
 
-            <button
-              onClick={() => navigate("/documents")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <FileText size={20} />
-              <span>Upload Documents</span>
-            </button>
+            {documents.length === 0 &&
+              application.status === ApplicationStatus.PENDING && (
+                <button
+                  onClick={() => navigate("/documents")}
+                  className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FileText size={20} />
+                  <span>Upload Documents</span>
+                </button>
+              )}
 
             <button
               onClick={() => navigate("/company")}
