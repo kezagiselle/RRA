@@ -6,6 +6,7 @@ import ApplicantDashboard from "./pages/ApplicantDashboard";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import DocumentPage from "./pages/DocumentPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/success" element={<SuccessfulPage />} />
         <Route path="/dashboard" element={<ApplicantDashboard />} />
         <Route path="/documents" element={<DocumentPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </Router>
   );

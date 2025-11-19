@@ -1,0 +1,547 @@
+// src/pages/ProfilePage.tsx
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  FileText,
+  LogOut,
+  Menu,
+  X,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Building2,
+  CreditCard,
+  Briefcase,
+  GraduationCap,
+  Award,
+  MapPin,
+} from "lucide-react";
+import rra from "../imgs/rra.png";
+import { getCurrentUser } from "../services/getCurrentUser";
+
+import type { Application } from "../types/application";
+import { ApplicationStatus, BusinessStatus } from "../types/application";
+
+import StatusBadge from "../components/StatusBadge";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+export default function ProfilePage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [application, setApplication] = useState<Application | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  // Fetch application data on component mount
+  useEffect(() => {
+    const fetchApplicationData = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          navigate("/");
+          return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        const response = await getCurrentUser();
+        console.log("ProfilePage: Application data:", response.data);
+
+        setApplication(response.data.data);
+      } catch (err: any) {
+        console.error("ProfilePage: Error fetching application:", err);
+
+        if (err.response?.status === 401) {
+          // Unauthorized - redirect to login
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("tinNumber");
+          navigate("/");
+        } else {
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to load profile data"
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplicationData();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("tinNumber");
+    navigate("/");
+  };
+
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(date);
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const formatDateTime = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const getEnumLabel = (value: string | undefined): string => {
+    if (!value) return "N/A";
+    return value
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !application) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <User className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Error Loading Profile
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {error || "Failed to load profile data"}
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center space-x-3">
+          <img src={rra} alt="RRA Logo" className="h-10 object-contain" />
+          <span className="text-lg font-semibold text-gray-800">Profile</span>
+        </div>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition duration-200"
+        >
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      <div className="flex">
+        {/* Sidebar */}
+        <aside
+          className={`
+            ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+            lg:translate-x-0 fixed lg:sticky top-0 left-0 z-50
+            w-64 bg-white min-h-screen border-r border-gray-200 flex flex-col
+            transition-transform duration-300 ease-in-out lg:transition-none
+          `}
+        >
+          {/* Logo */}
+          <div className="p-6 border-b border-gray-200">
+            <img
+              src={rra}
+              alt="RRA Logo"
+              className="h-24 object-contain mx-auto"
+            />
+          </div>
+
+          {/* Navigation */}
+          <nav className="p-4 space-y-2 flex-1">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <FileText size={20} />
+              <span>Dashboard</span>
+            </button>
+
+            <button className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium border border-blue-200">
+              <User size={20} />
+              <span>Profile</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/documents")}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <FileText size={20} />
+              <span>Upload Documents</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/company")}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Building2 size={20} />
+              <span>Apply for Company</span>
+            </button>
+          </nav>
+
+          {/* Logout */}
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition duration-200"
+            >
+              <LogOut size={20} />
+              <span>Log Out</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Sidebar Overlay */}
+        {isSidebarOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Page Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
+                My Profile
+              </h1>
+              <p className="text-gray-600 mt-2">
+                View your personal information and application details.
+              </p>
+            </div>
+
+            {/* Personal Information Section */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                  <User className="h-5 w-5 mr-2" />
+                  Personal Information
+                </h2>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start space-x-3">
+                    <User className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Full Name</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.fullName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <CreditCard className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">TPIN</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.tpin}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <CreditCard className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">National ID</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.nid}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Mail className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="text-base font-semibold text-gray-800 break-all">
+                        {application.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Phone className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Phone Number</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.phoneNumber}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Briefcase className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Business Status</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {getEnumLabel(application.businessStatus)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {application.businessStatus === BusinessStatus.COMPANY &&
+                    application.tinCompany && (
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-500">Company TIN</p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {application.tinCompany}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                </div>
+              </div>
+            </div>
+
+            {/* Address Information Section */}
+            {application.workAddress && (
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Address Information
+                  </h2>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex items-start space-x-3">
+                    <MapPin className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Work Address</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.workAddress.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Education & Qualifications Section */}
+            {(application.bachelorDegree ||
+              application.mastersDegree ||
+              application.professionalQualification ||
+              application.otherProfessionalDetails) && (
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <GraduationCap className="h-5 w-5 mr-2" />
+                    Education & Qualifications
+                  </h2>
+                </div>
+
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {application.bachelorDegree && (
+                      <div className="flex items-start space-x-3">
+                        <GraduationCap className="h-5 w-5 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-500">
+                            Bachelor's Degree
+                          </p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {getEnumLabel(application.bachelorDegree)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {application.mastersDegree && (
+                      <div className="flex items-start space-x-3">
+                        <GraduationCap className="h-5 w-5 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-500">
+                            Master's Degree
+                          </p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {getEnumLabel(application.mastersDegree)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {application.professionalQualification && (
+                      <div className="flex items-start space-x-3">
+                        <Award className="h-5 w-5 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-500">
+                            Professional Qualification
+                          </p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {getEnumLabel(
+                              application.professionalQualification
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {application.otherProfessionalDetails && (
+                      <div className="flex items-start space-x-3 md:col-span-2">
+                        <Award className="h-5 w-5 text-gray-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-500">
+                            Other Professional Details
+                          </p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {application.otherProfessionalDetails}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Application Information Section */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Application Information
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Status Badge */}
+                <div className="flex justify-center">
+                  <StatusBadge status={application.status} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Application Date</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {formatDate(application.applicationDate)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {application.reviewedBy && (
+                    <div className="flex items-start space-x-3">
+                      <User className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Reviewed By</p>
+                        <p className="text-base font-semibold text-gray-800">
+                          {application.reviewedBy}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {application.reviewedAt && (
+                    <div className="flex items-start space-x-3">
+                      <Calendar className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Reviewed At</p>
+                        <p className="text-base font-semibold text-gray-800">
+                          {formatDateTime(application.reviewedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {application.status === ApplicationStatus.APPROVED && (
+                    <>
+                      {application.approvalDate && (
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="h-5 w-5 text-green-500 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-500">
+                              Approval Date
+                            </p>
+                            <p className="text-base font-semibold text-gray-800">
+                              {formatDate(application.approvalDate)}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {application.expiryDate && (
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="h-5 w-5 text-orange-500 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-500">Expiry Date</p>
+                            <p className="text-base font-semibold text-gray-800">
+                              {formatDate(application.expiryDate)}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Rejection Reason */}
+                {application.status === ApplicationStatus.REJECTED &&
+                  application.rejectionReason && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                      <div className="flex items-start space-x-3">
+                        <FileText className="h-5 w-5 text-red-500 mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-red-800 mb-2">
+                            Rejection Reason:
+                          </h3>
+                          <p className="text-sm text-red-700 whitespace-pre-wrap">
+                            {application.rejectionReason}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
