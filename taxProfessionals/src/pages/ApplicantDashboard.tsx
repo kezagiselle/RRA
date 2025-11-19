@@ -356,9 +356,9 @@ export default function ApplicantDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-40">
+      <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between z-40 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <img src={rra} alt="RRA Logo" className="h-10 object-contain" />
           <span className="text-lg font-semibold text-gray-800">Dashboard</span>
@@ -371,13 +371,13 @@ export default function ApplicantDashboard() {
         </button>
       </div>
 
-      <div className="flex">
+      <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
           className={`
             ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
             lg:translate-x-0 fixed lg:sticky top-0 left-0 z-50
-            w-64 bg-white min-h-screen border-r border-gray-200 flex flex-col
+            w-64 bg-white h-screen lg:h-full border-r border-gray-200 flex flex-col
             transition-transform duration-300 ease-in-out lg:transition-none
           `}
         >
@@ -446,7 +446,7 @@ export default function ApplicantDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden">
+        <main className="flex-1 p-4 lg:p-8 w-full overflow-y-auto overflow-x-hidden">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Welcome Message */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
