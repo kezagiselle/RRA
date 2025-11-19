@@ -10,6 +10,8 @@ interface StatusBadgeProps {
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const getStatusStyles = () => {
     switch (status) {
+      case ApplicationStatus.REGISTERED:
+        return "bg-blue-100 text-blue-800 border-blue-300";
       case ApplicationStatus.PENDING:
         return "bg-yellow-100 text-yellow-800 border-yellow-300";
       case ApplicationStatus.APPROVED:
@@ -23,6 +25,8 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   const getStatusText = () => {
     switch (status) {
+      case ApplicationStatus.REGISTERED:
+        return "REGISTERED - Upload Documents";
       case ApplicationStatus.PENDING:
         return "PENDING - Under Review";
       case ApplicationStatus.APPROVED:

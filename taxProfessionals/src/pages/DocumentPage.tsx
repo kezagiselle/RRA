@@ -59,19 +59,26 @@ const DocumentPage: React.FC = () => {
         const appData = response.data.data;
         setApplication(appData);
 
-        // Check application status
-        if (appData.status === ApplicationStatus.APPROVED) {
-          // APPROVED users cannot reapply - block access
+        // Check application status - only REGISTERED users can upload documents
+        if (appData.status === ApplicationStatus.REGISTERED) {
+          // REGISTERED users can upload documents
+          setIsReapply(false);
+        } else {
+          // All other statuses (PENDING, APPROVED, REJECTED) cannot upload documents
+          const statusMessages: Record<ApplicationStatus, string> = {
+            [ApplicationStatus.PENDING]:
+              "Your application is under review. You cannot upload documents at this time.",
+            [ApplicationStatus.APPROVED]:
+              "Your application has been approved. You cannot upload documents.",
+            [ApplicationStatus.REJECTED]:
+              "Your application was rejected. You cannot upload documents.",
+            [ApplicationStatus.REGISTERED]: "",
+          };
           setStatusError(
-            "Your application has been approved. You cannot reapply."
+            statusMessages[appData.status] ||
+              "You cannot upload documents at this time."
           );
           setRedirectCountdown(5);
-        } else if (appData.status === ApplicationStatus.REJECTED) {
-          // REJECTED users can reapply
-          setIsReapply(true);
-        } else if (appData.status === ApplicationStatus.PENDING) {
-          // PENDING users can upload documents (initial application)
-          setIsReapply(false);
         }
       } catch (err: any) {
         console.error("DocumentPage: Error fetching application:", err);
@@ -280,14 +287,50 @@ const DocumentPage: React.FC = () => {
     );
   }
 
-  // Show error if APPROVED user tries to access this page
-  if (statusError && application?.status === ApplicationStatus.APPROVED) {
+  // Show error if user tries to access this page without REGISTERED status
+  if (
+    statusError &&
+    application &&
+    application.status !== ApplicationStatus.REGISTERED
+  ) {
+    const getStatusIcon = () => {
+      switch (application.status) {
+        case ApplicationStatus.APPROVED:
+          return (
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          );
+        case ApplicationStatus.PENDING:
+          return (
+            <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          );
+        case ApplicationStatus.REJECTED:
+          return <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />;
+        default:
+          return (
+            <AlertTriangle className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+          );
+      }
+    };
+
+    const getStatusTitle = () => {
+      switch (application.status) {
+        case ApplicationStatus.APPROVED:
+          return "Application Approved";
+        case ApplicationStatus.PENDING:
+          return "Application Under Review";
+        case ApplicationStatus.REJECTED:
+          return "Application Rejected";
+        default:
+          return "Access Denied";
+      }
+    };
+
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full text-center">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          {getStatusIcon()}
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Application Approved
+            {getStatusTitle()}
           </h2>
           <p className="text-gray-600 mb-6">{statusError}</p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -348,7 +391,7 @@ const DocumentPage: React.FC = () => {
 
           <div className="text-center mb-6 sm:mb-8 lg:mb-10">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
-              {isReapply ? "Reapply - Document Upload" : "Document Upload"}
+              Document Upload
             </h1>
             <p className="text-sm sm:text-base text-gray-500">
               Please upload all required documents in PDF format.

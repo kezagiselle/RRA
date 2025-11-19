@@ -1,6 +1,7 @@
 // src/types/application.ts
 
 export enum ApplicationStatus {
+  REGISTERED = "REGISTERED",
   PENDING = "PENDING",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",

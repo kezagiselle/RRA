@@ -366,11 +366,9 @@ export default function ApplicantDashboard() {
     );
   }
 
-  // Check if user can upload documents (PENDING with no docs OR REJECTED)
+  // Check if user can upload documents (only when status is REGISTERED)
   const canUploadDocuments =
-    (documents.length === 0 &&
-      application.status === ApplicationStatus.PENDING) ||
-    application.status === ApplicationStatus.REJECTED;
+    application.status === ApplicationStatus.REGISTERED;
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
@@ -432,11 +430,7 @@ export default function ApplicantDashboard() {
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <Upload size={20} />
-                <span>
-                  {application.status === ApplicationStatus.REJECTED
-                    ? "Reapply - Upload Documents"
-                    : "Upload Documents"}
-                </span>
+                <span>Upload Documents</span>
               </button>
             )}
           </nav>
@@ -606,6 +600,18 @@ export default function ApplicantDashboard() {
                 </div>
 
                 {/* Status-specific Messages and Actions */}
+                {application.status === ApplicationStatus.REGISTERED && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <div className="flex items-start">
+                      <Upload className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+                      <p className="text-sm text-blue-800">
+                        Your application is registered. Please upload all
+                        required documents to proceed with your application.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {application.status === ApplicationStatus.PENDING && (
                   <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
                     <div className="flex items-start">
@@ -737,9 +743,7 @@ export default function ApplicantDashboard() {
                         onClick={() => navigate("/documents")}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
                       >
-                        {application.status === ApplicationStatus.REJECTED
-                          ? "Reapply - Upload Documents"
-                          : "Upload Documents"}
+                        Upload Documents
                       </button>
                     )}
                   </div>

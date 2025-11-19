@@ -179,11 +179,9 @@ export default function ProfilePage() {
     );
   }
 
-  // Check if user can upload documents (PENDING with no docs OR REJECTED)
+  // Check if user can upload documents (only when status is REGISTERED)
   const canUploadDocuments =
-    (documents.length === 0 &&
-      application.status === ApplicationStatus.PENDING) ||
-    application.status === ApplicationStatus.REJECTED;
+    application.status === ApplicationStatus.REGISTERED;
 
   return (
     <div className="min-h-screen bg-gray-50">
