@@ -1,274 +1,409 @@
-import React, { useState } from 'react';
-import { FileText, Bell, LogOut, Menu, X, ChevronRight, ChevronDown, Trash2, Edit, CheckCircle, Building2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// src/pages/ApplicantDashboard.tsx
+
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  FileText,
+  LogOut,
+  Menu,
+  X,
+  Download,
+  Eye,
+  RefreshCw,
+  CheckCircle,
+  Clock,
+  XCircle,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  AlertTriangle,
+  Upload,
+} from "lucide-react";
 import rra from "../imgs/rra.png";
-import { getDetails } from '../services/ViewApplicantDetails';
-import { getAllDocuments } from '../services/getDocuments';
-import { deleteDocument } from '../services/deleteDocument';
-import { updateDocument } from '../services/updateDocument';
-import { getVerifiedDocuments } from '../services/VerifiedDocuments';
+import { getCurrentUser } from "../services/getCurrentUser";
+import { getAllDocuments } from "../services/getDocuments";
+import { downloadCertificate } from "../services/downloadCertificate";
+import { viewDocument } from "../services/viewDocument";
+import { updateDocument } from "../services/updateDocument";
+
+// ✅ FIX: Use type-only imports
+import type { Application } from "../types/application";
+import { ApplicationStatus } from "../types/application";
+import type { Document as DocumentType } from "../types/document";
+import {
+  DOCUMENT_TYPE_LABELS,
+  DocumentType as DocTypeEnum,
+} from "../types/document";
+
+import StatusBadge from "../components/StatusBadge";
+import LoadingSpinner from "../components/LoadingSpinner";
+import Toast from "../components/Toast";
+import type { ToastType } from "../components/Toast";
+
+interface ToastState {
+  show: boolean;
+  message: string;
+  type: ToastType;
+}
 
 export default function ApplicantDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showDocuments, setShowDocuments] = useState(false);
-  const [showVerifiedDocuments, setShowVerifiedDocuments] = useState(false);
-  const [applicantData, setApplicantData] = useState<any>(null);
-  const [documentsData, setDocumentsData] = useState<any>(null);
-  const [verifiedDocumentsData, setVerifiedDocumentsData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [verifiedDocumentsLoading, setVerifiedDocumentsLoading] = useState(false);
+  const [application, setApplication] = useState<Application | null>(null);
+  const [documents, setDocuments] = useState<DocumentType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [documentsError, setDocumentsError] = useState<string | null>(null);
-  const [verifiedDocumentsError, setVerifiedDocumentsError] = useState<string | null>(null);
-  const [updatingDocId, setUpdatingDocId] = useState<string | number | null>(null);
-  const [deletingDocId, setDeletingDocId] = useState<string | number | null>(null);
+  const [toast, setToast] = useState<ToastState>({
+    show: false,
+    message: "",
+    type: "info",
+  });
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [processingDocId, setProcessingDocId] = useState<number | null>(null);
+  const [actionType, setActionType] = useState<
+    "view" | "download" | "replace" | null
+  >(null);
+
   const navigate = useNavigate();
-  
-  const tinNumber = localStorage.getItem('tinNumber');
-  
-  const handleUnderReviewClick = async () => {
-    if (!tinNumber) {
-      setError("TIN number not found. Please login again.");
-      return;
-    }
+  const mainContentRef = useRef<HTMLElement>(null);
 
-    // Toggle section
-    if (activeSection === 'underReview') {
-      setActiveSection(null);
-      setShowDetails(false);
-      return;
-    }
+  // Fetch application data on component mount
+  useEffect(() => {
+    const fetchApplicationData = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          navigate("/");
+          return;
+        }
 
-    setActiveSection('underReview');
-    setLoading(true);
-    setError(null);
-    setShowDetails(false);
-    setShowDocuments(false);
-    setShowVerifiedDocuments(false);
-    
-    try {
-      const response = await getDetails(tinNumber);
-      console.log('Dashboard: Applicant details response:', response);
-      console.log('Dashboard: Applicant details data:', response.data);
-      
-      // Handle nested data structure
-      const data = response.data?.data || response.data;
-      setApplicantData(data);
-      setShowDetails(true);
-    } catch (err: any) {
-      console.error('Dashboard: Error fetching applicant details:', err);
-      setError(err.response?.data?.message || err.message || "Failed to fetch applicant details");
-      setShowDetails(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setLoading(true);
+        setError(null);
 
-  const handleMyDocumentsClick = async () => {
-    if (!tinNumber) {
-      setDocumentsError("TIN number not found. Please login again.");
-      return;
-    }
+        const response = await getCurrentUser();
+        console.log("Dashboard: Application data:", response.data);
 
-    // Toggle section
-    if (activeSection === 'myDocuments') {
-      setActiveSection(null);
-      setShowDocuments(false);
-      return;
-    }
+        setApplication(response.data.data);
+      } catch (err: any) {
+        console.error("Dashboard: Error fetching application:", err);
 
-    setActiveSection('myDocuments');
-    setDocumentsLoading(true);
-    setDocumentsError(null);
-    setShowDetails(false);
-    setShowDocuments(false);
-    setShowVerifiedDocuments(false);
-    
-    try {
-      const response = await getAllDocuments(tinNumber);
-      console.log('Dashboard: Documents response:', response);
-      console.log('Dashboard: Documents data:', response.data);
-      console.log('Dashboard: Full response structure:', JSON.stringify(response.data, null, 2));
-      
-      // Handle nested data structure
-      const data = response.data?.data || response.data;
-      console.log('Dashboard: Processed documents data:', data);
-      console.log('Dashboard: Is array?', Array.isArray(data));
-      if (Array.isArray(data) && data.length > 0) {
-        console.log('Dashboard: First document structure:', JSON.stringify(data[0], null, 2));
-        console.log('Dashboard: First document keys:', Object.keys(data[0]));
+        if (err.response?.status === 401) {
+          // Unauthorized - redirect to login
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("tinNumber");
+          navigate("/");
+        } else {
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to load application data"
+          );
+        }
+      } finally {
+        setLoading(false);
       }
-      setDocumentsData(data);
-      setShowDocuments(true);
-    } catch (err: any) {
-      console.error('Dashboard: Error fetching documents:', err);
-      setDocumentsError(err.response?.data?.message || err.message || "Failed to fetch documents");
-      setShowDocuments(false);
-    } finally {
-      setDocumentsLoading(false);
-    }
-  };
+    };
 
-  const handleVerifiedDocumentsClick = async () => {
-    if (!tinNumber) {
-      setVerifiedDocumentsError("TIN number not found. Please login again.");
-      return;
-    }
+    fetchApplicationData();
+  }, [navigate]);
 
-    // Toggle section
-    if (activeSection === 'verifiedDocuments') {
-      setActiveSection(null);
-      setShowVerifiedDocuments(false);
-      return;
-    }
+  // Fetch documents data
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!application) return;
 
-    setActiveSection('verifiedDocuments');
-    setVerifiedDocumentsLoading(true);
-    setVerifiedDocumentsError(null);
-    setShowDetails(false);
-    setShowDocuments(false);
-    setShowVerifiedDocuments(false);
-    
-    try {
-      const response = await getVerifiedDocuments(tinNumber);
-      console.log('Dashboard: Verified Documents response:', response);
-      console.log('Dashboard: Verified Documents data:', response.data);
-      
-      // Handle nested data structure
-      const data = response.data?.data || response.data;
-      console.log('Dashboard: Processed verified documents data:', data);
-      console.log('Dashboard: Is array?', Array.isArray(data));
-      if (Array.isArray(data) && data.length > 0) {
-        console.log('Dashboard: First verified document structure:', JSON.stringify(data[0], null, 2));
+      try {
+        setDocumentsLoading(true);
+
+        const response = await getAllDocuments(application.tpin);
+        console.log("Dashboard: Documents data:", response.data);
+
+        setDocuments(response.data.data || []);
+      } catch (err: any) {
+        console.error("Dashboard: Error fetching documents:", err);
+        showToast(
+          err.response?.data?.message || "Failed to load documents",
+          "error"
+        );
+      } finally {
+        setDocumentsLoading(false);
       }
-      
-      setVerifiedDocumentsData(data);
-      setShowVerifiedDocuments(true);
-    } catch (err: any) {
-      console.error('Dashboard: Error fetching verified documents:', err);
-      setVerifiedDocumentsError(err.response?.data?.message || err.message || "Failed to fetch verified documents");
-      setShowVerifiedDocuments(false);
-    } finally {
-      setVerifiedDocumentsLoading(false);
-    }
+    };
+
+    fetchDocuments();
+  }, [application]);
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ show: true, message, type });
   };
 
   const handleLogout = () => {
-    // Clear authentication data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('tinNumber');
-    
-    // Navigate to login page
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("tinNumber");
     navigate("/");
   };
 
-  const handleDeleteDocument = async (documentId: string | number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click event
-    
-    if (!window.confirm('Are you sure you want to delete this document?')) {
-      return;
-    }
-
-    setDeletingDocId(documentId);
-    
-    try {
-      await deleteDocument(documentId);
-      console.log('Dashboard: Document deleted successfully');
-      
-      // Refresh documents list
-      if (tinNumber) {
-        const response = await getAllDocuments(tinNumber);
-        const data = response.data?.data || response.data;
-        setDocumentsData(data);
-      }
-      
-      alert('Document deleted successfully!');
-    } catch (err: any) {
-      console.error('Dashboard: Error deleting document:', err);
-      alert(err.response?.data?.message || err.message || 'Failed to delete document');
-    } finally {
-      setDeletingDocId(null);
+  const handleLogoClick = () => {
+    // Scroll main content to top
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
-  const handleUpdateDocument = async (documentId: string | number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click event
-    
-    // Create a file input element
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf';
-    
-    input.onchange = async (event: Event) => {
-      const target = event.target as HTMLInputElement;
+  const handleReapply = () => {
+    // Navigate to document upload page for reapplication
+    navigate("/documents");
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!application) return;
+
+    try {
+      setDownloadingCertificate(true);
+
+      const response = await downloadCertificate(application.tpin);
+
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${
+        application.status === ApplicationStatus.APPROVED
+          ? "Approval_Certificate"
+          : "Rejection_Letter"
+      }_${application.tpin}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast("Document downloaded successfully", "success");
+    } catch (err: any) {
+      console.error("Dashboard: Error downloading certificate:", err);
+      showToast(
+        err.response?.data?.message || "Failed to download certificate",
+        "error"
+      );
+    } finally {
+      setDownloadingCertificate(false);
+    }
+  };
+
+  const handleViewDocument = async (docId: number) => {
+    try {
+      setProcessingDocId(docId);
+      setActionType("view");
+
+      const response = await viewDocument(docId);
+
+      // Create blob URL and open in new tab
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      // Clean up after a delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      showToast("Document opened in new tab", "success");
+    } catch (err: any) {
+      console.error("Dashboard: Error viewing document:", err);
+      showToast(
+        err.response?.data?.message || "Failed to view document",
+        "error"
+      );
+    } finally {
+      setProcessingDocId(null);
+      setActionType(null);
+    }
+  };
+
+  const handleDownloadDocument = async (
+    docId: number,
+    documentType: string
+  ) => {
+    try {
+      setProcessingDocId(docId);
+      setActionType("download");
+
+      const response = await viewDocument(docId);
+
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${
+        DOCUMENT_TYPE_LABELS[documentType as keyof typeof DOCUMENT_TYPE_LABELS]
+      }.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showToast("Document downloaded successfully", "success");
+    } catch (err: any) {
+      console.error("Dashboard: Error downloading document:", err);
+      showToast(
+        err.response?.data?.message || "Failed to download document",
+        "error"
+      );
+    } finally {
+      setProcessingDocId(null);
+      setActionType(null);
+    }
+  };
+
+  const handleReplaceDocument = async (docId: number, documentType: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to replace this document?"
+    );
+    if (!confirmed) return;
+
+    // Create file input
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,application/pdf";
+
+    input.onchange = async (e: Event) => {
+      const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
-      
-      if (!file) {
+
+      if (!file) return;
+
+      if (file.type !== "application/pdf") {
+        showToast("Please select a PDF file", "error");
         return;
       }
 
-      // Validate PDF
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file');
-        return;
-      }
-
-      setUpdatingDocId(documentId);
-      
       try {
-        // Get document type from the document data
-        const doc = Array.isArray(documentsData) 
-          ? documentsData.find((d: any) => 
-              d.id === documentId 
-              || d.documentId === documentId 
-              || d.document_id === documentId
-              || d.docId === documentId
-              || d.doc_id === documentId
-            )
-          : null;
-        
-        console.log('Dashboard: Found document for update:', doc);
-        console.log('Dashboard: Document ID being used:', documentId);
-        
-        const documentType = doc?.documentType || doc?.type || doc?.documentType || 'SIGNEDLETTER'; // Default fallback
-        
-        await updateDocument(documentId, file, documentType);
-        console.log('Dashboard: Document updated successfully');
-        
+        setProcessingDocId(docId);
+        setActionType("replace");
+
+        await updateDocument(docId, file, documentType);
+
         // Refresh documents list
-        if (tinNumber) {
-          const response = await getAllDocuments(tinNumber);
-          const data = response.data?.data || response.data;
-          setDocumentsData(data);
+        if (application) {
+          const response = await getAllDocuments(application.tpin);
+          setDocuments(response.data.data || []);
         }
-        
-        alert('Document updated successfully!');
+
+        showToast("Document replaced successfully", "success");
       } catch (err: any) {
-        console.error('Dashboard: Error updating document:', err);
-        alert(err.response?.data?.message || err.message || 'Failed to update document');
+        console.error("Dashboard: Error replacing document:", err);
+        showToast(
+          err.response?.data?.message || "Failed to replace document",
+          "error"
+        );
       } finally {
-        setUpdatingDocId(null);
+        setProcessingDocId(null);
+        setActionType(null);
       }
     };
-    
+
     input.click();
   };
 
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(date);
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const formatDateTime = (dateString: string | undefined): string => {
+    if (!dateString) return "N/A";
+
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const getDocumentLabel = (doc: DocumentType): string => {
+    // Check if this is an education certificate with certificateType metadata
+    if (doc.documentType === DocTypeEnum.EDUCERTIFICATE) {
+      if (doc.certificateType === "BACHELOR") {
+        return "Bachelor's Degree Certificate";
+      }
+      if (doc.certificateType === "PROFESSIONAL_QUALIFICATION") {
+        return "Professional Qualification Certificate";
+      }
+      if (doc.certificateType === "MASTERS") {
+        return "Master's Degree Certificate";
+      }
+      // Default to "Education Certificate" if no certificateType
+      return "Education Certificate";
+    }
+
+    // For all other document types, use the standard labels
+    return DOCUMENT_TYPE_LABELS[
+      doc.documentType as keyof typeof DOCUMENT_TYPE_LABELS
+    ];
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !application) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Error Loading Dashboard
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {error || "Failed to load application data"}
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user can upload documents (only when status is REGISTERED)
+  const canUploadDocuments =
+    application.status === ApplicationStatus.REGISTERED;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between z-40 flex-shrink-0">
         <div className="flex items-center space-x-3">
-          <img 
-            src={rra} 
-            alt="RRA Logo" 
-            className="h-10 object-contain" 
-          />
+          <img src={rra} alt="RRA Logo" className="h-10 object-contain" />
           <span className="text-lg font-semibold text-gray-800">Dashboard</span>
         </div>
-        <button 
+        <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition duration-200"
         >
@@ -276,500 +411,482 @@ export default function ApplicantDashboard() {
         </button>
       </div>
 
-      <div className="flex mt-4">
-      
-        <aside className={`
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-          lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50
-          w-56 sm:w-64 bg-white min-h-screen border-r border-gray-200 flex flex-col
-          transition-transform duration-300 ease-in-out lg:transition-none
-        `}>
-          
-          <div className="p-3 sm:p-4 border-b border-gray-200">
-            <img 
-              src={rra} 
-              alt="RRA Logo" 
-              className="h-20 sm:h-24 lg:h-28 object-contain mx-auto lg:mx-0" 
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside
+          className={`
+            ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+            lg:translate-x-0 fixed lg:sticky top-0 left-0 z-50
+            w-64 bg-white h-screen lg:h-full border-r border-gray-200 flex flex-col
+            transition-transform duration-300 ease-in-out lg:transition-none
+          `}
+        >
+          {/* Logo */}
+          <button
+            onClick={handleLogoClick}
+            className="p-6 border-b border-gray-200 w-full hover:bg-gray-50 transition-colors cursor-pointer"
+            aria-label="Scroll to top"
+          >
+            <img
+              src={rra}
+              alt="RRA Logo"
+              className="h-24 object-contain mx-auto"
             />
-          </div>
+          </button>
 
-          
-          <nav className="p-3 sm:p-4 space-y-2 flex-1">
-            <button 
-              onClick={handleUnderReviewClick}
-              className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors ${
-                activeSection === 'underReview' 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2 sm:space-x-3">
-              <FileText size={18} className="sm:w-5 sm:h-5" />
-                <span className="text-xs sm:text-sm lg:text-base">Under Review</span>
-              </div>
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
-              ) : activeSection === 'underReview' ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
+          {/* Navigation */}
+          <nav className="p-4 space-y-2 flex-1">
+            <button className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium border border-blue-200">
+              <FileText size={20} />
+              <span>Dashboard</span>
             </button>
 
-            <button 
-              onClick={handleMyDocumentsClick}
-              className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors ${
-                activeSection === 'myDocuments' 
-                  ? 'bg-green-100 text-green-700 border border-green-300' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <div className="flex items-center space-x-2 sm:space-x-3">
-              <FileText size={18} className="sm:w-5 sm:h-5" />
-                <span className="text-xs sm:text-sm lg:text-base">My Documents</span>
-              </div>
-              {documentsLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
-              ) : activeSection === 'myDocuments' ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
-            </button>
-        
-            <button 
-              onClick={handleVerifiedDocumentsClick}
-              className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors ${
-                activeSection === 'verifiedDocuments' 
-                  ? 'bg-purple-100 text-purple-700 border border-purple-300' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <CheckCircle size={18} className="sm:w-5 sm:h-5" />
-                <span className="text-xs sm:text-sm lg:text-base">Verified Documents</span>
-              </div>
-              {verifiedDocumentsLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
-              ) : activeSection === 'verifiedDocuments' ? (
-                <ChevronDown size={16} />
-              ) : (
-                <ChevronRight size={16} />
-              )}
+              <User size={20} />
+              <span>Profile</span>
             </button>
 
-            <button 
-              onClick={() => navigate("/company")}
-              className="w-full flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 sm:py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Building2 size={18} className="sm:w-5 sm:h-5" />
-              <span className="text-xs sm:text-sm lg:text-base">Apply for Company</span>
-            </button>
+            {canUploadDocuments && (
+              <button
+                onClick={() => navigate("/documents")}
+                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Upload size={20} />
+                <span>Upload Documents</span>
+              </button>
+            )}
           </nav>
 
-        
-          <div className="p-3 sm:p-4 border-t border-gray-200 mt-auto">
-            <button 
+          {/* Logout */}
+          <div className="p-4 border-t border-gray-200">
+            <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 sm:py-3 text-gray-600 hover:bg-amber-50 hover:text-amber-600 rounded-lg transition duration-200"
+              className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition duration-200"
             >
-              <LogOut size={18} className="sm:w-5 sm:h-5" />
-              <span className="text-xs sm:text-sm lg:text-base">Log Out</span>
+              <LogOut size={20} />
+              <span>Log Out</span>
             </button>
           </div>
         </aside>
 
-        
+        {/* Sidebar Overlay */}
         {isSidebarOpen && (
-          <div 
+          <div
             className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
-        
-        <main className="flex-1 p-3 sm:p-4 lg:p-8 w-full">
-        
-          <div className="mb-4 sm:mb-6 lg:mb-8 flex justify-end">
-            <button 
-              onClick={() => navigate("/documents")}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full transition duration-200 shadow-md text-xs sm:text-sm lg:text-base"
-            >
-              Apply
-            </button>
+        {/* Main Content */}
+        <main
+          ref={mainContentRef}
+          className="flex-1 p-4 lg:p-8 w-full overflow-y-auto overflow-x-hidden"
+        >
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Welcome Message */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
+                Welcome, {application.fullName}!
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Here's your application status and documents overview.
+              </p>
+            </div>
+
+            {/* Application Status Card */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">
+                  Application Status
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Status Badge */}
+                <div className="flex justify-center">
+                  <StatusBadge status={application.status} />
+                </div>
+
+                {/* Application Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start space-x-3">
+                    <User className="h-5 w-5 text-gray-400 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Full Name</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.fullName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">TPIN</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.tpin}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Mail className="h-5 w-5 text-gray-400 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="text-base font-semibold text-gray-800 break-all">
+                        {application.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Phone className="h-5 w-5 text-gray-400 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Phone Number</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {application.phoneNumber}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-500">Application Date</p>
+                      <p className="text-base font-semibold text-gray-800">
+                        {formatDate(application.applicationDate)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {application.status === ApplicationStatus.APPROVED &&
+                    application.approvalDate && (
+                      <>
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Approval Date
+                            </p>
+                            <p className="text-base font-semibold text-gray-800">
+                              {formatDate(application.approvalDate)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <Clock className="h-5 w-5 text-gray-400 mt-1" />
+                          <div>
+                            <p className="text-sm text-gray-500">Expiry Date</p>
+                            <p className="text-base font-semibold text-gray-800">
+                              {formatDate(application.expiryDate)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <User className="h-5 w-5 text-gray-400 mt-1" />
+                          <div>
+                            <p className="text-sm text-gray-500">Reviewed By</p>
+                            <p className="text-base font-semibold text-gray-800">
+                              {application.reviewedBy || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                  {application.status === ApplicationStatus.REJECTED && (
+                    <>
+                      <div className="flex items-start space-x-3">
+                        <Calendar className="h-5 w-5 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Reviewed Date</p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {formatDate(application.reviewedAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <User className="h-5 w-5 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Reviewed By</p>
+                          <p className="text-base font-semibold text-gray-800">
+                            {application.reviewedBy || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Status-specific Messages and Actions */}
+                {application.status === ApplicationStatus.REGISTERED && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <div className="flex items-start">
+                      <Upload className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+                      <p className="text-sm text-blue-800">
+                        Your application is registered. Please upload all
+                        required documents to proceed with your application.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {application.status === ApplicationStatus.PENDING && (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+                    <div className="flex items-start">
+                      <Clock className="h-5 w-5 text-yellow-500 mt-0.5 mr-3" />
+                      <p className="text-sm text-yellow-800">
+                        Your application is currently under review. You will
+                        receive an email notification once it has been
+                        processed.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {application.status === ApplicationStatus.APPROVED && (
+                  <>
+                    <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                      <div className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3" />
+                        <p className="text-sm text-green-800">
+                          Congratulations! Your application has been approved.
+                          You can download your approval certificate below.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <button
+                        onClick={handleDownloadCertificate}
+                        disabled={downloadingCertificate}
+                        className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                      >
+                        {downloadingCertificate ? (
+                          <>
+                            <LoadingSpinner size="sm" className="text-white" />
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download size={20} />
+                            <span>Download Approval Certificate</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {application.status === ApplicationStatus.REJECTED && (
+                  <>
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                      <div className="flex items-start">
+                        <XCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3" />
+                        <p className="text-sm text-red-800">
+                          Your application has been rejected. Please review the
+                          reason below and you can reapply by uploading new
+                          documents.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-red-100 border border-red-300 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-red-800 mb-2">
+                            Rejection Reason:
+                          </h3>
+                          <p className="text-sm text-red-700 whitespace-pre-wrap">
+                            {application.rejectionReason ||
+                              "No specific reason provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                      <button
+                        onClick={handleDownloadCertificate}
+                        disabled={downloadingCertificate}
+                        className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                      >
+                        {downloadingCertificate ? (
+                          <>
+                            <LoadingSpinner size="sm" className="text-white" />
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download size={20} />
+                            <span>Download Rejection Letter</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleReapply}
+                        className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                      >
+                        <RefreshCw size={20} />
+                        <span>Reapply with New Documents</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Documents Section */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">
+                  My Documents
+                </h2>
+              </div>
+
+              <div className="p-6">
+                {documentsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : documents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-4">
+                      No documents uploaded yet.
+                    </p>
+                    {canUploadDocuments && (
+                      <button
+                        onClick={() => navigate("/documents")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+                      >
+                        Upload Documents
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">
+                            Document Type
+                          </th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">
+                            Upload Date
+                          </th>
+                          <th className="text-center px-4 py-3 text-sm font-semibold text-gray-700">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documents.map((doc) => (
+                          <tr
+                            key={doc.docId}
+                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-4 py-4 text-sm font-medium text-gray-800">
+                              {getDocumentLabel(doc)}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-600">
+                              {formatDateTime(doc.uploadedAt)}
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center justify-center space-x-2">
+                                <button
+                                  onClick={() => handleViewDocument(doc.docId)}
+                                  disabled={
+                                    processingDocId === doc.docId &&
+                                    actionType === "view"
+                                  }
+                                  className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                  title="View document"
+                                >
+                                  {processingDocId === doc.docId &&
+                                  actionType === "view" ? (
+                                    <LoadingSpinner size="sm" />
+                                  ) : (
+                                    <Eye size={16} />
+                                  )}
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    handleDownloadDocument(
+                                      doc.docId,
+                                      doc.documentType
+                                    )
+                                  }
+                                  disabled={
+                                    processingDocId === doc.docId &&
+                                    actionType === "download"
+                                  }
+                                  className="p-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                  title="Download document"
+                                >
+                                  {processingDocId === doc.docId &&
+                                  actionType === "download" ? (
+                                    <LoadingSpinner size="sm" />
+                                  ) : (
+                                    <Download size={16} />
+                                  )}
+                                </button>
+
+                                {application.status !==
+                                  ApplicationStatus.APPROVED && (
+                                  <button
+                                    onClick={() =>
+                                      handleReplaceDocument(
+                                        doc.docId,
+                                        doc.documentType
+                                      )
+                                    }
+                                    disabled={
+                                      processingDocId === doc.docId &&
+                                      actionType === "replace"
+                                    }
+                                    className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    title="Replace document"
+                                  >
+                                    {processingDocId === doc.docId &&
+                                    actionType === "replace" ? (
+                                      <LoadingSpinner size="sm" />
+                                    ) : (
+                                      <RefreshCw size={16} />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-
-          {/* Error Messages */}
-          {error && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs sm:text-sm">
-              {error}
-            </div>
-          )}
-          
-          {documentsError && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs sm:text-sm">
-              {documentsError}
-            </div>
-          )}
-
-          {verifiedDocumentsError && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs sm:text-sm">
-              {verifiedDocumentsError}
-            </div>
-          )}
-
-          {/* Applicant Details Table */}
-          {showDetails && applicantData && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-4 sm:mb-6 lg:mb-8 overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Application Details</h2>
-              </div>
-              
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <table className="w-full border-collapse min-w-full">
-                <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Field</th>
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {Object.entries(applicantData).map(([key, value]: [string, any]) => {
-                      // Skip work address field
-                      if (key.toLowerCase().includes('workaddress') || key.toLowerCase().includes('work address')) {
-                        return null;
-                      }
-                      
-                      // Handle workplace location fields separately
-                      if (key.toLowerCase().includes('workplace') && typeof value === 'object' && value !== null) {
-                        // Extract location fields from workplace object
-                        const locationFields = ['province', 'district', 'sector', 'cell', 'village'];
-                        const locationData: any = {};
-                        
-                        locationFields.forEach(field => {
-                          // Check various possible field name formats
-                          let fieldValue = value[field] 
-                            || value[field.charAt(0).toUpperCase() + field.slice(1)]
-                            || value[field.toUpperCase()]
-                            || value[`${field}Name`]
-                            || value[`${field}Id`];
-                          
-                          // If fieldValue is an object, extract the name property
-                          if (fieldValue && typeof fieldValue === 'object') {
-                            fieldValue = fieldValue.name || fieldValue.Name || fieldValue.NAME || fieldValue;
-                          }
-                          
-                          if (fieldValue) {
-                            locationData[field] = fieldValue;
-                          }
-                        });
-                        
-                        // If we found location data, display it
-                        if (Object.keys(locationData).length > 0) {
-                          return (
-                            <React.Fragment key={key}>
-                              {locationFields.map((field) => {
-                                const fieldValue = locationData[field];
-                                if (!fieldValue) return null;
-                                
-                                const formattedField = field.charAt(0).toUpperCase() + field.slice(1);
-                                return (
-                                  <tr key={`workplace-${field}`} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedField}</td>
-                                    <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 break-words">{String(fieldValue)}</td>
-                                  </tr>
-                                );
-                              })}
-                            </React.Fragment>
-                          );
-                        }
-                        // If no location data found, skip the workplace object
-                        return null;
-                      }
-                      
-                      // Skip null, undefined, or empty string values
-                      if (value === null || value === undefined || value === '') {
-                        return null;
-                      }
-                      
-                      // Format key for display
-                      const formattedKey = key
-                        .replace(/([A-Z])/g, ' $1')
-                        .replace(/^./, str => str.toUpperCase())
-                        .trim();
-                      
-                      // Handle arrays
-                      if (Array.isArray(value)) {
-                        if (value.length === 0) {
-                          return null;
-                        }
-                        
-                        // If array contains objects (like documents), format them
-                        if (value.length > 0 && typeof value[0] === 'object') {
-                          const formattedValue = value.map((item: any, index: number) => {
-                            if (typeof item === 'object') {
-                              // Format object properties
-                              const objStr = Object.entries(item)
-                                .map(([k, v]) => `${k}: ${v}`)
-                                .join(', ');
-                              return `${index + 1}. ${objStr}`;
-                            }
-                            return String(item);
-                          }).join(' | ');
-                          
-                          return (
-                            <tr key={key} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                              <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedKey}</td>
-                              <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
-                                <div className="space-y-1">
-                                  {value.map((item: any, index: number) => (
-                                    <div key={index} className="text-xs bg-gray-50 p-2 rounded break-words">
-                                      {typeof item === 'object' 
-                                        ? Object.entries(item).map(([k, v]) => (
-                                            <div key={k} className="break-words"><span className="font-medium">{k}:</span> {String(v)}</div>
-                                          ))
-                                        : String(item)
-                                      }
-                                    </div>
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        } else {
-                          // Simple array
-                          const formattedValue = value.join(', ');
-                          return (
-                            <tr key={key} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                              <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedKey}</td>
-                              <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 break-words">{formattedValue}</td>
-                            </tr>
-                          );
-                        }
-                      }
-                      
-                      // Handle nested objects
-                      if (typeof value === 'object' && value !== null) {
-                        const formattedValue = Object.entries(value)
-                          .map(([k, v]) => `${k}: ${v}`)
-                          .join(', ');
-                        return (
-                          <tr key={key} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedKey}</td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
-                              <div className="space-y-1">
-                                {Object.entries(value).map(([k, v]) => (
-                                  <div key={k} className="text-xs bg-gray-50 p-2 rounded break-words">
-                                    <span className="font-medium">{k}:</span> {String(v)}
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      }
-                      
-                      // Handle primitive values
-                      let formattedValue = value;
-                      if (typeof value === 'boolean') {
-                        formattedValue = value ? 'Yes' : 'No';
-                      } else if (typeof value === 'string' && value.length > 100) {
-                        formattedValue = value.substring(0, 100) + '...';
-                      }
-                      
-                      return (
-                        <tr key={key} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedKey}</td>
-                          <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 break-words">{String(formattedValue)}</td>
-                        </tr>
-                      );
-                    })}
-                    {/* Status Row - Always show as Pending */}
-                    <tr className="border-b border-gray-100 bg-amber-50">
-                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">Status</td>
-                      <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm">
-                        <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-amber-200 text-amber-800">
-                          Pending
-                        </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            </div>
-          )}
-
-          {/* Documents Table */}
-          {showDocuments && documentsData && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-4 sm:mb-6 lg:mb-8 overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">My Documents</h2>
-              </div>
-              
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <table className="w-full border-collapse min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Document</th>
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Details</th>
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(documentsData) ? (
-                      documentsData.map((doc: any, index: number) => {
-                        // Try multiple possible ID field names
-                        const docId = doc.id 
-                          || doc.documentId 
-                          || doc.document_id 
-                          || doc.docId
-                          || doc.doc_id
-                          || doc.documentId
-                          || (doc.document && doc.document.id)
-                          || null;
-                        
-                        // If no ID found, skip this document or show error
-                        if (!docId) {
-                          console.warn('Dashboard: Document missing ID:', doc);
-                          return (
-                            <tr key={index} className="border-b border-gray-100">
-                              <td colSpan={3} className="px-6 py-4 text-sm text-red-600">
-                                Document {index + 1}: Missing document ID
-                              </td>
-                            </tr>
-                          );
-                        }
-                        
-                        const isDeleting = deletingDocId === docId;
-                        const isUpdating = updatingDocId === docId;
-                        
-                        return (
-                          <tr key={docId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">
-                              Document {index + 1}
-                            </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
-                              <div className="space-y-1">
-                                {Object.entries(doc).map(([k, v]: [string, any]) => (
-                                  <div key={k} className="text-xs bg-gray-50 p-2 rounded break-words">
-                                    <span className="font-medium">{k}:</span> {String(v)}
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-                              <div className="flex items-center space-x-1 sm:space-x-2">
-                                <button
-                                  onClick={(e) => handleUpdateDocument(docId, e)}
-                                  disabled={isUpdating || isDeleting}
-                                  className="p-1.5 sm:p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="Update document"
-                                >
-                                  {isUpdating ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
-                                  ) : (
-                                    <Edit size={14} className="sm:w-4 sm:h-4" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={(e) => handleDeleteDocument(docId, e)}
-                                  disabled={isUpdating || isDeleting}
-                                  className="p-1.5 sm:p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="Delete document"
-                                >
-                                  {isDeleting ? (
-                                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
-                                  ) : (
-                                    <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                                  )}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      Object.entries(documentsData).map(([key, value]: [string, any]) => {
-                        if (value === null || value === undefined || value === '') {
-                          return null;
-                        }
-                        
-                        const formattedKey = key
-                          .replace(/([A-Z])/g, ' $1')
-                          .replace(/^./, str => str.toUpperCase())
-                          .trim();
-                        
-                        let formattedValue = value;
-                        if (Array.isArray(value)) {
-                          formattedValue = value.length > 0 ? value.join(', ') : 'N/A';
-                        } else if (typeof value === 'object') {
-                          formattedValue = JSON.stringify(value);
-                        } else if (typeof value === 'boolean') {
-                          formattedValue = value ? 'Yes' : 'No';
-                        }
-                        
-                        return (
-                          <tr key={key} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">{formattedKey}</td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 break-words">{String(formattedValue)}</td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4"></td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Verified Documents Table */}
-          {showVerifiedDocuments && verifiedDocumentsData && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-4 sm:mb-6 lg:mb-8 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800">Verified Documents</h2>
-              </div>
-              
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <table className="w-full border-collapse min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Document</th>
-                      <th className="text-left px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-gray-700">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(verifiedDocumentsData) && verifiedDocumentsData.length > 0 ? (
-                      verifiedDocumentsData.map((doc: any, index: number) => (
-                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-700">
-                            Document {index + 1}
-                          </td>
-                          <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
-                            <div className="space-y-1">
-                              {Object.entries(doc).map(([k, v]: [string, any]) => (
-                                <div key={k} className="text-xs bg-gray-50 p-2 rounded break-words">
-                                  <span className="font-medium">{k}:</span> {String(v)}
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={2} className="px-3 sm:px-4 lg:px-6 py-6 sm:py-8 text-center text-xs sm:text-sm text-gray-500">
-                          No verified documents found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      )}
     </div>
   );
 }

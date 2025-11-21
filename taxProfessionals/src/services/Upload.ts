@@ -2,7 +2,12 @@ import axios from 'axios';
 
 const REST_API_BASE_URL = 'http://localhost:8080/api/documents/upload'
 
-export const uploadDocument = (tpin: string | number, file: File, documentType: string) => {
+export const uploadDocument = (
+    tpin: string | number, 
+    file: File, 
+    documentType: string,
+    additionalFields?: Record<string, string | File>
+) => {
     const tpinString = String(tpin);
     
     // Create FormData with file, tpin, and documentType
@@ -10,6 +15,15 @@ export const uploadDocument = (tpin: string | number, file: File, documentType: 
     formData.append('file', file);
     formData.append('tpin', tpinString);
     formData.append('documentType', documentType);
+    
+    // Add additional fields if provided (e.g., bachelorDegree, professionalQualification, etc.)
+    if (additionalFields) {
+        Object.entries(additionalFields).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                formData.append(key, value);
+            }
+        });
+    }
     
     // Get authentication token from localStorage
     const token = localStorage.getItem('authToken');
@@ -41,10 +55,13 @@ export const uploadDocument = (tpin: string | number, file: File, documentType: 
     });
 }
 
-export const uploadAllDocuments = (tpin: string | number, files: { file: File, documentType: string }[]) => {
+export const uploadAllDocuments = (
+    tpin: string | number, 
+    files: { file: File, documentType: string, additionalFields?: Record<string, string | File> }[]
+) => {
     // Upload each document separately with tpin, documentType, and file
-    const uploadPromises = files.map(({ file, documentType }) => 
-        uploadDocument(tpin, file, documentType)
+    const uploadPromises = files.map(({ file, documentType, additionalFields }) => 
+        uploadDocument(tpin, file, documentType, additionalFields)
     );
     
     // Execute all uploads in parallel
