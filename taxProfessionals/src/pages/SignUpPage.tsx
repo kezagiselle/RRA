@@ -955,13 +955,29 @@ const SignUpPage: React.FC = () => {
             )}
 
             {renderField(
-              <ApplicantForm
-                label="Phone Number"
-                icon={<FaPhone />}
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+250XXXXXXXXX"
-              />,
+              <div className="flex flex-col">
+                <label className="text-gray-700 font-medium mb-2">Phone Number</label>
+                <div className="relative">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
+                    +250
+                  </div>
+                  <input
+                    type="text"
+                    value={phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : ""}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ""); // Only allow digits
+                      if (value.length <= 9) {
+                        setPhoneNumber("+250" + value);
+                      }
+                    }}
+                    placeholder="XXXXXXXXX"
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
+                    <FaPhone />
+                  </span>
+                </div>
+              </div>,
               "phoneNumber"
             )}
 
@@ -972,7 +988,7 @@ const SignUpPage: React.FC = () => {
                 icon={<FaLock />}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder="Create password"
               />,
               "password"
             )}
@@ -1048,19 +1064,19 @@ const SignUpPage: React.FC = () => {
 
               {renderField(
                 <ApplicantForm
-                  label="Password (Shared by all members)"
+                  label="Password"
                   type="password"
                   icon={<FaLock />}
                   value={companyPassword}
                   onChange={(e) => setCompanyPassword(e.target.value)}
-                  placeholder="Enter password (shared by all members)"
+                  placeholder="Create password"
                 />,
                 "companyPassword"
               )}
 
               <div className="border-t pt-4 mt-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                  Company Location (Shared by all members)
+                  Company Location
                 </h4>
                 {renderLocationFields()}
               </div>
@@ -1141,15 +1157,29 @@ const SignUpPage: React.FC = () => {
                   )}
 
                   {renderField(
-                    <ApplicantForm
-                      label="Phone Number"
-                      icon={<FaPhone />}
-                      value={member.phoneNumber}
-                      onChange={(e) =>
-                        updateMember(member.id, "phoneNumber", e.target.value)
-                      }
-                      placeholder="+250XXXXXXXXX"
-                    />,
+                    <div className="flex flex-col">
+                      <label className="text-gray-700 font-medium mb-2">Phone Number</label>
+                      <div className="relative">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
+                          +250
+                        </div>
+                        <input
+                          type="text"
+                          value={member.phoneNumber.startsWith("+250") ? member.phoneNumber.slice(4) : ""}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, ""); // Only allow digits
+                            if (value.length <= 9) {
+                              updateMember(member.id, "phoneNumber", "+250" + value);
+                            }
+                          }}
+                          placeholder="XXXXXXXXX"
+                          className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
+                          <FaPhone />
+                        </span>
+                      </div>
+                    </div>,
                     `member_${index}_phoneNumber`
                   )}
                 </div>

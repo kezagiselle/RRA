@@ -9,6 +9,7 @@ export enum DocumentType {
   CV = "CV",
   TAXCLEARANCECERTIFICATE = "TAXCLEARANCECERTIFICATE",
   BUSINESSREGISTRATIONCERT = "BUSINESSREGISTRATIONCERT",
+  EBMCERTIFICATE = "EBMCERTIFICATE",
 }
 
 export interface Document {
@@ -39,8 +40,9 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.CRIMINALRECORD]: "Criminal Record Certificate",
   [DocumentType.EDUCERTIFICATE]: "Education Certificate",
   [DocumentType.RECOMMENDATIONLETTER]: "Recommendation Letter",
-  [DocumentType.NONREFUNDFEES]: "Non-Refundable Fees Receipt",
+  [DocumentType.NONREFUNDFEES]: "Payment Proof",
   [DocumentType.CV]: "Curriculum Vitae (CV)",
   [DocumentType.TAXCLEARANCECERTIFICATE]: "Tax Clearance Certificate",
   [DocumentType.BUSINESSREGISTRATIONCERT]: "Business Registration Certificate",
+  [DocumentType.EBMCERTIFICATE]: "EBM Certificate",
 };

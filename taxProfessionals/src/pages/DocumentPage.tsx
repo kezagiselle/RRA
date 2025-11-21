@@ -26,6 +26,7 @@ const DocumentPage: React.FC = () => {
   const [cv, setCv] = useState<File | null>(null);
   const [taxClearanceCert, setTaxClearanceCert] = useState<File | null>(null);
   const [businessRegCert, setBusinessRegCert] = useState<File | null>(null);
+  const [ebmCertificate, setEbmCertificate] = useState<File | null>(null);
 
   // Education and Qualification fields
   const [bachelorDegree, setBachelorDegree] = useState<BachelorDegree | null>(
@@ -180,14 +181,15 @@ const DocumentPage: React.FC = () => {
       formErrors.bachelorDegreeFile =
         "Bachelor's Degree certificate is required";
 
-    if (!professionalQualification)
-      formErrors.professionalQualification =
-        "Professional Qualification is required";
-    if (!professionalQualificationFile)
-      formErrors.professionalQualificationFile =
-        "Professional Qualification certificate is required";
+    // Professional Qualification is now optional
+    // if (!professionalQualification)
+    //   formErrors.professionalQualification =
+    //     "Professional Qualification is required";
+    // if (!professionalQualificationFile)
+    //   formErrors.professionalQualificationFile =
+    //     "Professional Qualification certificate is required";
 
-    // If Professional Qualification is OTHER, require the text field
+    // If Professional Qualification is OTHER, require the text field (only if OTHER is selected)
     if (
       professionalQualification === ProfessionalQualification.OTHER &&
       !otherProfessionalQualification.trim()
@@ -244,6 +246,14 @@ const DocumentPage: React.FC = () => {
         { file: businessRegCert!, documentType: "BUSINESSREGISTRATIONCERT" },
       ];
 
+      // Add EBM Certificate if provided
+      if (ebmCertificate) {
+        documents.push({
+          file: ebmCertificate,
+          documentType: "EBMCERTIFICATE",
+        });
+      }
+
       // Upload Bachelor's Degree Certificate with all education metadata
       if (bachelorDegreeFile) {
         const bachelorFields: Record<string, string> = {
@@ -275,11 +285,11 @@ const DocumentPage: React.FC = () => {
         });
       }
 
-      // Upload Professional Qualification Certificate as separate document
-      if (professionalQualificationFile) {
+      // Upload Professional Qualification Certificate as separate document (optional)
+      if (professionalQualificationFile && professionalQualification) {
         const profQualFields: Record<string, string> = {
           certificateType: "PROFESSIONAL_QUALIFICATION",
-          professionalQualification: professionalQualification!,
+          professionalQualification: professionalQualification,
         };
         if (
           professionalQualification === ProfessionalQualification.OTHER &&
@@ -691,11 +701,11 @@ const DocumentPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Professional Qualification - Required */}
+                {/* Professional Qualification - Optional */}
                 <div className="mb-4 sm:mb-6">
                   <label className="block text-gray-700 font-medium mb-2">
                     Professional Qualification{" "}
-                    <span className="text-red-500">*</span>
+                    <span className="text-gray-500">(Optional)</span>
                   </label>
                   <select
                     value={professionalQualification || ""}
@@ -743,12 +753,12 @@ const DocumentPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Professional Qualification Certificate Upload - Required */}
+                {/* Professional Qualification Certificate Upload - Optional */}
                 {professionalQualification && (
                   <div className="mb-4 sm:mb-6">
                     <label className="block text-gray-700 font-medium mb-2">
                       Professional Qualification Certificate{" "}
-                      <span className="text-red-500">*</span>
+                      <span className="text-gray-500">(Optional)</span>
                     </label>
                     <input
                       type="file"
@@ -774,7 +784,7 @@ const DocumentPage: React.FC = () => {
               </div>
 
               {renderFileField(
-                "Recommendation Letter",
+                "Recommendation letter / Experience",
                 recommendationLetter,
                 (e) =>
                   handleFileChange(
@@ -787,7 +797,7 @@ const DocumentPage: React.FC = () => {
               )}
 
               {renderFileField(
-                "Non-Refund Fees",
+                "Payment Proof",
                 nonRefundFees,
                 (e) => handleFileChange(e, setNonRefundFees, "nonRefundFees"),
                 "nonRefundFees",
@@ -817,6 +827,14 @@ const DocumentPage: React.FC = () => {
                 (e) =>
                   handleFileChange(e, setBusinessRegCert, "businessRegCert"),
                 "businessRegCert",
+                <MdCloudUpload className="text-blue-500 text-xl sm:text-2xl" />
+              )}
+
+              {renderFileField(
+                "EBM certificate",
+                ebmCertificate,
+                (e) => handleFileChange(e, setEbmCertificate, "ebmCertificate"),
+                "ebmCertificate",
                 <MdCloudUpload className="text-blue-500 text-xl sm:text-2xl" />
               )}
             </div>

@@ -455,7 +455,7 @@ export default function ApplicantDashboard() {
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <Upload size={20} />
-                <span>Upload Documents</span>
+                <span>Apply Here</span>
               </button>
             )}
           </nav>
@@ -768,7 +768,7 @@ export default function ApplicantDashboard() {
                         onClick={() => navigate("/documents")}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
                       >
-                        Upload Documents
+                        Apply Here
                       </button>
                     )}
                   </div>
