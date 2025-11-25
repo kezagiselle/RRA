@@ -3,6 +3,8 @@ import { FaUser, FaLock } from "react-icons/fa";
 import rra from "../imgs/rra.png";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/Login";
+import { getCurrentUser } from "../services/getCurrentUser";
+import { AccountType } from "../types/company";
 
 const LoginPage: React.FC = () => {
   const [tinNumber, setTinNumber] = useState("");
@@ -11,7 +13,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -19,55 +21,68 @@ const LoginPage: React.FC = () => {
     const tin = tinNumber.trim();
     console.log("LoginPage: Submitting login - TIN:", tin, "Type:", typeof tin);
 
-    login(tin, password)
-      .then((response) => {
-        console.log("LoginPage: Login successful:", response);
-        console.log("LoginPage: Response data:", response.data);
+    try {
+      const response = await login(tin, password);
+      console.log("LoginPage: Login successful:", response);
+      console.log("LoginPage: Response data:", response.data);
 
-        localStorage.setItem("tinNumber", tin);
+      localStorage.setItem("tinNumber", tin);
 
-        const token =
-          response.data?.token ||
-          response.data?.accessToken ||
-          response.data?.jwt ||
-          response.data?.access_token ||
-          response.data?.data?.token ||
-          response.data?.data?.accessToken ||
-          response.headers?.authorization ||
-          response.headers?.Authorization;
+      const token =
+        response.data?.token ||
+        response.data?.accessToken ||
+        response.data?.jwt ||
+        response.data?.access_token ||
+        response.data?.data?.token ||
+        response.data?.data?.accessToken ||
+        response.headers?.authorization ||
+        response.headers?.Authorization;
 
-        if (token) {
-          const cleanToken = token.startsWith("Bearer ")
-            ? token.substring(7)
-            : token;
-          localStorage.setItem("authToken", cleanToken);
-          console.log("LoginPage: Token stored successfully in localStorage");
+      if (token) {
+        const cleanToken = token.startsWith("Bearer ")
+          ? token.substring(7)
+          : token;
+        localStorage.setItem("authToken", cleanToken);
+        console.log("LoginPage: Token stored successfully in localStorage");
+      } else {
+        console.warn("LoginPage: No token found in response.");
+      }
+
+      // Check account type and redirect to appropriate dashboard
+      try {
+        const userResponse = await getCurrentUser();
+        const userData = userResponse.data.data;
+        
+        // Check if this is a company account by checking for tinCompany field
+        if (userData.tinCompany) {
+          navigate("/company-dashboard");
         } else {
-          console.warn("LoginPage: No token found in response.");
+          navigate("/dashboard");
         }
-
-        setLoading(false);
+      } catch (err) {
+        // If we can't determine account type, default to individual dashboard
+        console.error("LoginPage: Error checking account type:", err);
         navigate("/dashboard");
-      })
-      .catch((error) => {
-        console.error("LoginPage: Login error:", error);
-        console.error("LoginPage: Error response:", error.response);
-        setLoading(false);
+      }
+    } catch (error: any) {
+      console.error("LoginPage: Login error:", error);
+      console.error("LoginPage: Error response:", error.response);
+      setLoading(false);
 
-        if (error.response?.data?.message) {
-          setError(error.response.data.message);
-        } else if (error.response?.data) {
-          setError(
-            typeof error.response.data === "string"
-              ? error.response.data
-              : JSON.stringify(error.response.data)
-          );
-        } else if (error.message) {
-          setError(error.message);
-        } else {
-          setError("Invalid TIN number or password");
-        }
-      });
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (error.response?.data) {
+        setError(
+          typeof error.response.data === "string"
+            ? error.response.data
+            : JSON.stringify(error.response.data)
+        );
+      } else if (error.message) {
+        setError(error.message);
+      } else {
+        setError("Invalid TIN number or password");
+      }
+    }
   };
 
   const handleSignUpClick = (e: React.MouseEvent<HTMLAnchorElement>) => {

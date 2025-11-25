@@ -7,12 +7,16 @@ import Errors from "../components/Errors";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { uploadAllDocuments } from "../services/Upload";
 import { getCurrentUser } from "../services/getCurrentUser";
+import { getCompanyMembers } from "../services/getCompanyMembers";
+import { getDetails } from "../services/ViewApplicantDetails";
 import type { Application } from "../types/application";
 import {
   ApplicationStatus,
   BachelorDegree,
   ProfessionalQualification,
 } from "../types/application";
+import { AccountType } from "../types/company";
+import type { CompanyAccount, CompanyMember } from "../types/company";
 
 const DocumentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -54,6 +58,11 @@ const DocumentPage: React.FC = () => {
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(
     null
   );
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
+  const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
+  const [selectedMemberTpin, setSelectedMemberTpin] = useState<string | null>(
+    null
+  );
 
   // Fetch application data to check status
   useEffect(() => {
@@ -76,29 +85,98 @@ const DocumentPage: React.FC = () => {
         const response = await getCurrentUser();
         console.log("DocumentPage: Application data:", response.data);
 
-        const appData = response.data.data;
-        setApplication(appData);
-
-        // Check application status - only REGISTERED users can upload documents
-        if (appData.status === ApplicationStatus.REGISTERED) {
-          // REGISTERED users can upload documents
-          setIsReapply(false);
+        const userData = response.data.data;
+        
+        // Check if this is a company account by checking for tinCompany field
+        const isCompany = !!userData.tinCompany;
+        
+        if (isCompany) {
+          setIsCompanyAdmin(true);
+          
+          // Use members from response if available (similar to CompanyDashboard)
+          if (userData.members && Array.isArray(userData.members)) {
+            setCompanyMembers(userData.members);
+          }
+          
+          // Check if member TPIN is selected (from company dashboard)
+          const storedMemberTpin = localStorage.getItem("selectedMemberTpin");
+          if (storedMemberTpin) {
+            setSelectedMemberTpin(storedMemberTpin);
+            
+            // Try to fetch additional members from API if companyId is available
+            // This is optional - we already have members from getCurrentUser response
+            const companyIdentifier = userData.companyId || userData.tinCompany;
+            if (companyIdentifier) {
+              try {
+                const companyId = typeof companyIdentifier === 'number' 
+                  ? companyIdentifier 
+                  : parseInt(companyIdentifier) || 0;
+                if (companyId > 0) {
+                  const membersResponse = await getCompanyMembers(companyId);
+                  if (membersResponse.data.data && membersResponse.data.data.length > 0) {
+                    setCompanyMembers(membersResponse.data.data);
+                  }
+                }
+              } catch (err: any) {
+                // Endpoint might not exist yet (401/404) - this is expected
+                if (err.response?.status === 401 || err.response?.status === 404) {
+                  console.log("DocumentPage: Members endpoint not available, using members from response");
+                } else {
+                  console.error("DocumentPage: Error fetching members:", err);
+                }
+                // Members from response are already set above, so we're good
+              }
+            }
+            
+            // For company admin with selected member, check member's application status
+            // Fetch member's application details to check status
+            try {
+              const memberAppResponse = await getDetails(storedMemberTpin);
+              const memberAppData = memberAppResponse.data.data || memberAppResponse.data;
+              
+              // If member's status is REJECTED, this is a reapplication
+              if (memberAppData.status === ApplicationStatus.REJECTED) {
+                setIsReapply(true);
+                setApplication(memberAppData as Application);
+              } else {
+                setIsReapply(false);
+              }
+            } catch (err: any) {
+              // If we can't fetch member details, allow upload (backend will validate)
+              console.log("DocumentPage: Could not fetch member application details:", err);
+              setIsReapply(false);
+            }
+          } else {
+            // No member selected - redirect to company dashboard
+            navigate("/company-dashboard");
+            return;
+          }
         } else {
-          // All other statuses (PENDING, APPROVED, REJECTED) cannot upload documents
-          const statusMessages: Record<ApplicationStatus, string> = {
-            [ApplicationStatus.PENDING]:
-              "Your application is under review. You cannot upload documents at this time.",
-            [ApplicationStatus.APPROVED]:
-              "Your application has been approved. You cannot upload documents.",
-            [ApplicationStatus.REJECTED]:
-              "Your application was rejected. You cannot upload documents.",
-            [ApplicationStatus.REGISTERED]: "",
-          };
-          setStatusError(
-            statusMessages[appData.status] ||
-              "You cannot upload documents at this time."
-          );
-          setRedirectCountdown(5);
+          // Individual account
+          const appData = userData as Application;
+          setApplication(appData);
+          
+          // Check application status - only REGISTERED users can upload documents
+          if (appData.status === ApplicationStatus.REGISTERED) {
+            // REGISTERED users can upload documents
+            setIsReapply(false);
+          } else {
+            // All other statuses (PENDING, APPROVED, REJECTED) cannot upload documents
+            const statusMessages: Record<ApplicationStatus, string> = {
+              [ApplicationStatus.PENDING]:
+                "Your application is under review. You cannot upload documents at this time.",
+              [ApplicationStatus.APPROVED]:
+                "Your application has been approved. You cannot upload documents.",
+              [ApplicationStatus.REJECTED]:
+                "Your application was rejected. You cannot upload documents.",
+              [ApplicationStatus.REGISTERED]: "",
+            };
+            setStatusError(
+              statusMessages[appData.status] ||
+                "You cannot upload documents at this time."
+            );
+            setRedirectCountdown(5);
+          }
         }
       } catch (err: any) {
         console.error("DocumentPage: Error fetching application:", err);
@@ -322,8 +400,11 @@ const DocumentPage: React.FC = () => {
       console.log("DocumentPage: Is Reapply:", isReapply);
       console.log("DocumentPage: Total documents to upload:", documents.length);
 
+      // Determine TPIN to use: selected member TPIN for company admin, or logged-in user's TPIN
+      const tpinToUse = selectedMemberTpin || tinNumber;
+      
       // Upload all documents (each with tpin, documentType, and file)
-      uploadAllDocuments(tinNumber, documents)
+      uploadAllDocuments(tinNumber, documents, selectedMemberTpin || undefined)
         .then((response: any) => {
           console.log("DocumentPage: Upload successful:", response);
           console.log("DocumentPage: Response data:", response.data);
@@ -337,8 +418,14 @@ const DocumentPage: React.FC = () => {
             alert("All documents uploaded successfully!");
           }
 
-          // Navigate to dashboard
-          navigate("/dashboard");
+          // Navigate to appropriate dashboard
+          if (isCompanyAdmin) {
+            // Clear selected member from localStorage
+            localStorage.removeItem("selectedMemberTpin");
+            navigate("/company-dashboard");
+          } else {
+            navigate("/dashboard");
+          }
         })
         .catch((error: any) => {
           console.error("DocumentPage: Upload error:", error);
@@ -529,8 +616,21 @@ const DocumentPage: React.FC = () => {
             <p className="text-sm sm:text-base text-gray-500">
               Please upload all required documents in PDF format.
             </p>
-            {tinNumber && (
+            {tinNumber && !isCompanyAdmin && (
               <p className="text-sm text-gray-600 mt-2">TIN: {tinNumber}</p>
+            )}
+            {isCompanyAdmin && selectedMemberTpin && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-semibold text-blue-800">
+                  Uploading documents for member:
+                </p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {(() => {
+                    const selectedMember = companyMembers.find((m) => m.tpin === selectedMemberTpin);
+                    return selectedMember?.fullName || selectedMemberTpin;
+                  })()}
+                </p>
+              </div>
             )}
           </div>
 
@@ -542,10 +642,10 @@ const DocumentPage: React.FC = () => {
                   <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 mr-3 flex-shrink-0" />
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-orange-800 mb-2">
-                      Your Previous Application Was Rejected
+                      {isCompanyAdmin ? "Member's Previous Application Was Rejected" : "Your Previous Application Was Rejected"}
                     </h3>
                     <p className="text-sm text-orange-700 mb-2">
-                      Please upload new documents to reapply. Your application
+                      Please upload new documents to reapply. {isCompanyAdmin ? "The member's" : "Your"} application
                       will be reviewed again.
                     </p>
                     <div className="mt-3 pt-3 border-t border-orange-200">

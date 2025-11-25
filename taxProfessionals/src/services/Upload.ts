@@ -6,14 +6,16 @@ export const uploadDocument = (
     tpin: string | number, 
     file: File, 
     documentType: string,
-    additionalFields?: Record<string, string | File>
+    additionalFields?: Record<string, string | File>,
+    memberTpin?: string | number
 ) => {
     const tpinString = String(tpin);
     
     // Create FormData with file, tpin, and documentType
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('tpin', tpinString);
+    // Use memberTpin if provided (for company admin), otherwise use logged-in user's tpin
+    formData.append('tpin', memberTpin ? String(memberTpin) : tpinString);
     formData.append('documentType', documentType);
     
     // Add additional fields if provided (e.g., bachelorDegree, professionalQualification, etc.)
@@ -29,6 +31,7 @@ export const uploadDocument = (
     const token = localStorage.getItem('authToken');
     
     console.log('Upload Service: TIN:', tpinString);
+    console.log('Upload Service: Member TPIN:', memberTpin);
     console.log('Upload Service: Document Type:', documentType);
     console.log('Upload Service: File Name:', file.name);
     console.log('Upload Service: Token exists:', !!token);
@@ -57,11 +60,12 @@ export const uploadDocument = (
 
 export const uploadAllDocuments = (
     tpin: string | number, 
-    files: { file: File, documentType: string, additionalFields?: Record<string, string | File> }[]
+    files: { file: File, documentType: string, additionalFields?: Record<string, string | File> }[],
+    memberTpin?: string | number
 ) => {
     // Upload each document separately with tpin, documentType, and file
     const uploadPromises = files.map(({ file, documentType, additionalFields }) => 
-        uploadDocument(tpin, file, documentType, additionalFields)
+        uploadDocument(tpin, file, documentType, additionalFields, memberTpin)
     );
     
     // Execute all uploads in parallel

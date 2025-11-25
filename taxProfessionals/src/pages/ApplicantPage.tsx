@@ -6,6 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import Errors from '../components/Errors';
 import rra from "../imgs/rra.png"
 import { getProvince } from '../services/Province';
+import { getCurrentUser } from '../services/getCurrentUser';
+import { getCompanyMembers } from '../services/getCompanyMembers';
+import { AccountType } from '../types/company';
+import type { CompanyAccount, CompanyMember } from '../types/company';
 
 function ApplicantPage() {
   const navigate = useNavigate();
@@ -21,10 +25,83 @@ function ApplicantPage() {
   const [status, setStatus] = useState('');
   const [errors, setErrors] = useState<any>({});
   const [currentStep, setCurrentStep] = useState(2);
-  const [provincedata, setProvincedata] = useState<any[]>([])
+  const [provincedata, setProvincedata] = useState<any[]>([]);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
+  const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([]);
+  const [selectedMemberTpin, setSelectedMemberTpin] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-     getProvince().then((response) => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const response = await getCurrentUser();
+        const userData = response.data.data;
+        
+        // Check if this is a company account by checking for tinCompany field
+        if (userData.tinCompany) {
+          setIsCompanyAdmin(true);
+          
+          // Use members from response if available (similar to CompanyDashboard)
+          if (userData.members && Array.isArray(userData.members)) {
+            setCompanyMembers(userData.members);
+          }
+          
+          // Check if member TPIN is selected (from company dashboard)
+          const storedMemberTpin = localStorage.getItem("selectedMemberTpin");
+          if (storedMemberTpin) {
+            setSelectedMemberTpin(storedMemberTpin);
+            
+            // Try to fetch additional members from API if companyId is available
+            // This is optional - we already have members from getCurrentUser response
+            const companyIdentifier = userData.companyId || userData.tinCompany;
+            if (companyIdentifier) {
+              try {
+                const companyId = typeof companyIdentifier === 'number' 
+                  ? companyIdentifier 
+                  : parseInt(companyIdentifier) || 0;
+                if (companyId > 0) {
+                  const membersResponse = await getCompanyMembers(companyId);
+                  if (membersResponse.data.data && membersResponse.data.data.length > 0) {
+                    setCompanyMembers(membersResponse.data.data);
+                  }
+                }
+              } catch (err: any) {
+                // Endpoint might not exist yet (401/404) - this is expected
+                if (err.response?.status === 401 || err.response?.status === 404) {
+                  console.log("ApplicantPage: Members endpoint not available, using members from response");
+                } else {
+                  console.error("ApplicantPage: Error fetching members:", err);
+                }
+                // Members from response are already set above, so we're good
+              }
+            }
+          } else {
+            // No member selected - redirect to company dashboard
+            navigate("/company-dashboard");
+            return;
+          }
+        }
+      } catch (err: any) {
+        console.error("ApplicantPage: Auth error:", err);
+        if (err.response?.status === 401) {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("tinNumber");
+          navigate("/login");
+        }
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+
+    getProvince().then((response) => {
       // Handle nested data structure: response.data.data or response.data
       console.log('Province API Full Response:', response);
       console.log('Province API Response Data:', response.data);
@@ -46,7 +123,7 @@ function ApplicantPage() {
       console.error('Error fetching provinces:', error);
       setProvincedata([]);
      })
-  }, [])
+  }, [navigate])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -65,6 +142,10 @@ function ApplicantPage() {
     setErrors(formErrors);
 
     if (Object.keys(formErrors).length === 0) {
+      // Clear selected member from localStorage if company admin
+      if (isCompanyAdmin) {
+        localStorage.removeItem("selectedMemberTpin");
+      }
       navigate("/success");
     }
   };
@@ -98,6 +179,16 @@ function ApplicantPage() {
     </div>
   );
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 py-4 sm:py-6 lg:py-10 px-3 sm:px-4 lg:px-8">
       <div className="max-w-4xl mx-auto">
@@ -114,7 +205,19 @@ function ApplicantPage() {
           <div className="text-center mb-6 sm:mb-8 lg:mb-10">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Applicant Registration</h1>
             <p className="text-sm sm:text-base text-gray-500">Please fill out all required fields carefully.</p>
-            
+            {isCompanyAdmin && selectedMemberTpin && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-semibold text-blue-800">
+                  Creating application for member:
+                </p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {(() => {
+                    const selectedMember = companyMembers.find((m) => m.tpin === selectedMemberTpin);
+                    return selectedMember?.fullName || selectedMemberTpin;
+                  })()}
+                </p>
+              </div>
+            )}
             
             <div className="flex justify-center mt-4 sm:mt-6 mb-2">
               <div className="flex items-center">

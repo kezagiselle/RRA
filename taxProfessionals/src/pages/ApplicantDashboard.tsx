@@ -30,6 +30,7 @@ import { updateDocument } from "../services/updateDocument";
 // ✅ FIX: Use type-only imports
 import type { Application } from "../types/application";
 import { ApplicationStatus } from "../types/application";
+import { AccountType } from "../types/company";
 import type { Document as DocumentType } from "../types/document";
 import {
   DOCUMENT_TYPE_LABELS,
@@ -84,7 +85,16 @@ export default function ApplicantDashboard() {
         const response = await getCurrentUser();
         console.log("Dashboard: Application data:", response.data);
 
-        setApplication(response.data.data);
+        const userData = response.data.data;
+        
+        // Check if this is a company account by checking for tinCompany field
+        if (userData.tinCompany) {
+          navigate("/company-dashboard");
+          return;
+        }
+
+        // Individual account - set application data
+        setApplication(userData as Application);
       } catch (err: any) {
         console.error("Dashboard: Error fetching application:", err);
 

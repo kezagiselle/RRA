@@ -25,7 +25,6 @@ interface MemberForm {
   id: string;
   nid: string;
   fullName: string;
-  email: string;
   phoneNumber: string;
 }
 
@@ -47,13 +46,13 @@ const SignUpPage: React.FC = () => {
   // Company form state
   const [companyName, setCompanyName] = useState("");
   const [companyTin, setCompanyTin] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
   const [members, setMembers] = useState<MemberForm[]>([
     {
       id: Date.now().toString(),
       nid: "",
       fullName: "",
-      email: "",
       phoneNumber: "",
     },
   ]);
@@ -317,7 +316,6 @@ const SignUpPage: React.FC = () => {
         id: Date.now().toString(),
         nid: "",
         fullName: "",
-        email: "",
         phoneNumber: "",
       },
     ]);
@@ -432,6 +430,10 @@ const SignUpPage: React.FC = () => {
     else if (!/^[0-9]{9}$/.test(companyTin.trim()))
       formErrors.companyTin = "Company TIN must be 9 digits";
 
+    if (!companyEmail.trim()) formErrors.companyEmail = "Company email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyEmail.trim()))
+      formErrors.companyEmail = "Company email is invalid";
+
     if (!companyPassword) formErrors.companyPassword = "Password is required";
     else if (companyPassword.length < 8)
       formErrors.companyPassword = "Password must be at least 8 characters";
@@ -450,7 +452,7 @@ const SignUpPage: React.FC = () => {
     if (!cell) formErrors.cell = "Cell is required";
     if (!village) formErrors.village = "Village is required";
 
-    // Validate each member (NO TIN, NO password - members share company TIN and password)
+    // Validate each member (NO TIN, NO password, NO email - members share company TIN, password, and email)
     members.forEach((member, index) => {
       if (!member.nid.trim())
         formErrors[`member_${index}_nid`] = `Member ${
@@ -469,15 +471,6 @@ const SignUpPage: React.FC = () => {
         formErrors[`member_${index}_fullName`] = `Member ${
           index + 1
         }: Full name must be at least 3 characters`;
-
-      if (!member.email.trim())
-        formErrors[`member_${index}_email`] = `Member ${
-          index + 1
-        }: Email is required`;
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email))
-        formErrors[`member_${index}_email`] = `Member ${
-          index + 1
-        }: Email is invalid`;
 
       if (!member.phoneNumber.trim())
         formErrors[`member_${index}_phoneNumber`] = `Member ${
@@ -633,10 +626,11 @@ const SignUpPage: React.FC = () => {
         return;
       }
 
-      // Prepare company data (members share TIN, password, and location - only member-specific fields in applicants)
+      // Prepare company data (members share TIN, password, email, and location - only member-specific fields in applicants)
       const companyData = {
         companyTin: companyTin.trim(),
         companyName: companyName.trim(),
+        companyEmail: companyEmail.trim(),
         password: companyPassword, // Shared password for all members
         numberOfApplicants: members.length,
         provinceId: locationIds.provinceId,
@@ -645,10 +639,9 @@ const SignUpPage: React.FC = () => {
         cellId: locationIds.cellId,
         villageId: locationIds.villageId,
         applicants: members.map((member) => ({
-          // Only member-specific fields - NO TIN, NO password, NO location fields
+          // Only member-specific fields - NO TIN, NO password, NO email, NO location fields
           nid: member.nid.trim(),
           fullName: member.fullName.trim(),
-          email: member.email.trim(),
           phoneNumber: member.phoneNumber.trim(),
         })),
       };
@@ -1064,6 +1057,18 @@ const SignUpPage: React.FC = () => {
 
               {renderField(
                 <ApplicantForm
+                  label="Company Email"
+                  type="email"
+                  icon={<FaEnvelope />}
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  placeholder="Enter company email"
+                />,
+                "companyEmail"
+              )}
+
+              {renderField(
+                <ApplicantForm
                   label="Password"
                   type="password"
                   icon={<FaLock />}
@@ -1140,20 +1145,6 @@ const SignUpPage: React.FC = () => {
                       placeholder="Enter full name"
                     />,
                     `member_${index}_fullName`
-                  )}
-
-                  {renderField(
-                    <ApplicantForm
-                      label="Email"
-                      type="email"
-                      icon={<FaEnvelope />}
-                      value={member.email}
-                      onChange={(e) =>
-                        updateMember(member.id, "email", e.target.value)
-                      }
-                      placeholder="Enter email"
-                    />,
-                    `member_${index}_email`
                   )}
 
                   {renderField(
