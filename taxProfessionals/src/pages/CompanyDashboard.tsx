@@ -17,10 +17,12 @@ import { getCurrentUser } from "../services/getCurrentUser";
 import { getCompanyMembers } from "../services/getCompanyMembers";
 import type { CompanyAccount, CompanyMember } from "../types/company";
 import { AccountType } from "../types/company";
+import { ApplicationStatus } from "../types/application";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Toast from "../components/Toast";
 import type { ToastType } from "../components/Toast";
 import MemberDetailsModal from "../components/MemberDetailsModal";
+import StatusBadge from "../components/StatusBadge";
 
 interface ToastState {
   show: boolean;
@@ -371,6 +373,9 @@ export default function CompanyDashboard() {
                           <th className="text-left px-6 py-4 text-sm font-bold text-gray-700 uppercase tracking-wider">
                             Phone
                           </th>
+                          <th className="text-left px-6 py-4 text-sm font-bold text-gray-700 uppercase tracking-wider">
+                            Status
+                          </th>
                           <th className="text-center px-6 py-4 text-sm font-bold text-gray-700 uppercase tracking-wider">
                             Actions
                           </th>
@@ -398,6 +403,20 @@ export default function CompanyDashboard() {
                             </td>
                             <td className="px-6 py-4 text-sm font-medium text-gray-600">
                               {member.phoneNumber}
+                            </td>
+                            <td className="px-6 py-4">
+                              {member.status &&
+                              Object.values(ApplicationStatus).includes(
+                                member.status as ApplicationStatus
+                              ) ? (
+                                <StatusBadge
+                                  status={member.status as ApplicationStatus}
+                                />
+                              ) : (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
+                                  Not Applied
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4">
                               <div

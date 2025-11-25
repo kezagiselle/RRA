@@ -53,6 +53,8 @@ export interface Application {
   expiryDate?: string;
   rejectionReason?: string;
   certificateFilePath?: string;
+  problematicDocumentIds?: number[];
+  hasReapplied?: boolean;
 }
 
 export interface ApiResponse<T> {
