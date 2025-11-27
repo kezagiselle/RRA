@@ -87,7 +87,7 @@ const LoginPage: React.FC = () => {
 
   const handleSignUpClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    navigate("/");
+    navigate("/signup");
   };
 
   return (

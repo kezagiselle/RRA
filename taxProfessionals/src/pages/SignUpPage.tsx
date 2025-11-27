@@ -21,13 +21,6 @@ import { addApplicant } from "../services/SignUp";
 import { addCompany } from "../services/CompanyRegister";
 import { determineSignupType } from "../services/SignupType";
 
-interface MemberForm {
-  id: string;
-  nid: string;
-  fullName: string;
-  phoneNumber: string;
-}
-
 const SignUpPage: React.FC = () => {
   console.log("SignUpPage: Component rendering");
 
@@ -48,14 +41,6 @@ const SignUpPage: React.FC = () => {
   const [companyTin, setCompanyTin] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
-  const [members, setMembers] = useState<MemberForm[]>([
-    {
-      id: Date.now().toString(),
-      nid: "",
-      fullName: "",
-      phoneNumber: "",
-    },
-  ]);
 
   // Location state (shared for both individual and company)
   const [province, setProvince] = useState("");
@@ -309,32 +294,6 @@ const SignUpPage: React.FC = () => {
       });
   };
 
-  const addMember = () => {
-    setMembers([
-      ...members,
-      {
-        id: Date.now().toString(),
-        nid: "",
-        fullName: "",
-        phoneNumber: "",
-      },
-    ]);
-  };
-
-  const removeMember = (id: string) => {
-    if (members.length === 1) {
-      setError("At least one member is required");
-      return;
-    }
-    setMembers(members.filter((m) => m.id !== id));
-  };
-
-  const updateMember = (id: string, field: keyof MemberForm, value: string) => {
-    setMembers(
-      members.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-    );
-  };
-
   const getLocationIds = () => {
     const selectedProvince = provincedata.find(
       (p: any) =>
@@ -430,7 +389,8 @@ const SignUpPage: React.FC = () => {
     else if (!/^[0-9]{9}$/.test(companyTin.trim()))
       formErrors.companyTin = "Company TIN must be 9 digits";
 
-    if (!companyEmail.trim()) formErrors.companyEmail = "Company email is required";
+    if (!companyEmail.trim())
+      formErrors.companyEmail = "Company email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyEmail.trim()))
       formErrors.companyEmail = "Company email is invalid";
 
@@ -451,36 +411,6 @@ const SignUpPage: React.FC = () => {
     if (!sector) formErrors.sector = "Sector is required";
     if (!cell) formErrors.cell = "Cell is required";
     if (!village) formErrors.village = "Village is required";
-
-    // Validate each member (NO TIN, NO password, NO email - members share company TIN, password, and email)
-    members.forEach((member, index) => {
-      if (!member.nid.trim())
-        formErrors[`member_${index}_nid`] = `Member ${
-          index + 1
-        }: NID is required`;
-      else if (!/^[0-9]{16}$/.test(member.nid.trim()))
-        formErrors[`member_${index}_nid`] = `Member ${
-          index + 1
-        }: NID must be 16 digits`;
-
-      if (!member.fullName.trim())
-        formErrors[`member_${index}_fullName`] = `Member ${
-          index + 1
-        }: Full name is required`;
-      else if (member.fullName.trim().length < 3)
-        formErrors[`member_${index}_fullName`] = `Member ${
-          index + 1
-        }: Full name must be at least 3 characters`;
-
-      if (!member.phoneNumber.trim())
-        formErrors[`member_${index}_phoneNumber`] = `Member ${
-          index + 1
-        }: Phone number is required`;
-      else if (!/^\+250\d{9}$/.test(member.phoneNumber))
-        formErrors[`member_${index}_phoneNumber`] = `Member ${
-          index + 1
-        }: Phone number must be in format +250XXXXXXXXX`;
-    });
 
     return formErrors;
   };
@@ -550,7 +480,7 @@ const SignUpPage: React.FC = () => {
           );
           setLoading(false);
           alert("Registration successful! Please login to continue.");
-          navigate("/login");
+          navigate("/");
         })
         .catch((error) => {
           console.error("SignUpPage: Individual registration error:", error);
@@ -626,24 +556,17 @@ const SignUpPage: React.FC = () => {
         return;
       }
 
-      // Prepare company data (members share TIN, password, email, and location - only member-specific fields in applicants)
+      // Prepare company data (members will be added from dashboard)
       const companyData = {
         companyTin: companyTin.trim(),
         companyName: companyName.trim(),
         companyEmail: companyEmail.trim(),
-        password: companyPassword, // Shared password for all members
-        numberOfApplicants: members.length,
+        password: companyPassword,
         provinceId: locationIds.provinceId,
         districtId: locationIds.districtId,
         sectorId: locationIds.sectorId,
         cellId: locationIds.cellId,
         villageId: locationIds.villageId,
-        applicants: members.map((member) => ({
-          // Only member-specific fields - NO TIN, NO password, NO email, NO location fields
-          nid: member.nid.trim(),
-          fullName: member.fullName.trim(),
-          phoneNumber: member.phoneNumber.trim(),
-        })),
       };
 
       console.log("SignUpPage: Submitting company registration:", companyData);
@@ -653,9 +576,9 @@ const SignUpPage: React.FC = () => {
           console.log("SignUpPage: Company registration successful:", response);
           setLoading(false);
           alert(
-            `Company registration successful for ${members.length} member(s)! Please login to continue.`
+            "Company registration successful! Please login to add members from your dashboard."
           );
-          navigate("/login");
+          navigate("/");
         })
         .catch((error) => {
           console.error("SignUpPage: Company registration error:", error);
@@ -884,7 +807,7 @@ const SignUpPage: React.FC = () => {
                   href="/login"
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate("/login");
+                    navigate("/");
                   }}
                   className="text-blue-400 hover:text-blue-600 font-semibold underline transition duration-200 text-sm sm:text-base"
                 >
@@ -949,14 +872,18 @@ const SignUpPage: React.FC = () => {
 
             {renderField(
               <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">Phone Number</label>
+                <label className="text-gray-700 font-medium mb-2">
+                  Phone Number
+                </label>
                 <div className="relative">
                   <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
                     +250
                   </div>
                   <input
                     type="text"
-                    value={phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : ""}
+                    value={
+                      phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : ""
+                    }
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, ""); // Only allow digits
                       if (value.length <= 9) {
@@ -1087,94 +1014,12 @@ const SignUpPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Members Section */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-md font-semibold text-gray-700">
-                  Company Members ({members.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={addMember}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition duration-200"
-                >
-                  + Add Member
-                </button>
-              </div>
-
-              {members.map((member, index) => (
-                <div
-                  key={member.id}
-                  className="bg-white p-4 rounded-lg border border-gray-200 space-y-3"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold text-gray-700">
-                      Member {index + 1}
-                    </h4>
-                    {members.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeMember(member.id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-semibold"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-
-                  {renderField(
-                    <ApplicantForm
-                      label="National ID"
-                      value={member.nid}
-                      onChange={(e) =>
-                        updateMember(member.id, "nid", e.target.value)
-                      }
-                      placeholder="Enter 16-digit NID"
-                    />,
-                    `member_${index}_nid`
-                  )}
-
-                  {renderField(
-                    <ApplicantForm
-                      label="Full Name"
-                      icon={<FaUser />}
-                      value={member.fullName}
-                      onChange={(e) =>
-                        updateMember(member.id, "fullName", e.target.value)
-                      }
-                      placeholder="Enter full name"
-                    />,
-                    `member_${index}_fullName`
-                  )}
-
-                  {renderField(
-                    <div className="flex flex-col">
-                      <label className="text-gray-700 font-medium mb-2">Phone Number</label>
-                      <div className="relative">
-                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
-                          +250
-                        </div>
-                        <input
-                          type="text"
-                          value={member.phoneNumber.startsWith("+250") ? member.phoneNumber.slice(4) : ""}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, ""); // Only allow digits
-                            if (value.length <= 9) {
-                              updateMember(member.id, "phoneNumber", "+250" + value);
-                            }
-                          }}
-                          placeholder="XXXXXXXXX"
-                          className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
-                          <FaPhone />
-                        </span>
-                      </div>
-                    </div>,
-                    `member_${index}_phoneNumber`
-                  )}
-                </div>
-              ))}
+            {/* Info about adding members later */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> You can add company members from your
+                dashboard after registration.
+              </p>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -1190,11 +1035,7 @@ const SignUpPage: React.FC = () => {
                 disabled={loading}
                 className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-full transition duration-200"
               >
-                {loading
-                  ? "Registering..."
-                  : `Register Company (${members.length} member${
-                      members.length > 1 ? "s" : ""
-                    })`}
+                {loading ? "Registering..." : "Register Company"}
               </button>
             </div>
 

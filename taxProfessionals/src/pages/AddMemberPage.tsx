@@ -35,7 +35,7 @@ const AddMemberPage: React.FC = () => {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) {
-          navigate("/login");
+          navigate("/");
           return;
         }
 
@@ -62,7 +62,7 @@ const AddMemberPage: React.FC = () => {
         if (err.response?.status === 401) {
           localStorage.removeItem("authToken");
           localStorage.removeItem("tinNumber");
-          navigate("/login");
+          navigate("/");
         }
       } finally {
         setCheckingAuth(false);
@@ -117,7 +117,6 @@ const AddMemberPage: React.FC = () => {
 
       addCompanyMember(companyIdentifier, memberData)
         .then((response) => {
-          console.log("AddMemberPage: Member added successfully:", response);
           setLoading(false);
           alert("Member added successfully!");
           navigate("/company-dashboard");
@@ -187,7 +186,7 @@ const AddMemberPage: React.FC = () => {
             You don't have permission to access this page
           </p>
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/")}
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
           >
             Go to Login

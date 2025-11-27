@@ -40,7 +40,7 @@ function ApplicantPage() {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) {
-          navigate("/login");
+          navigate("/");
           return;
         }
 
@@ -105,7 +105,7 @@ function ApplicantPage() {
         if (err.response?.status === 401) {
           localStorage.removeItem("authToken");
           localStorage.removeItem("tinNumber");
-          navigate("/login");
+          navigate("/");
         }
       } finally {
         setCheckingAuth(false);

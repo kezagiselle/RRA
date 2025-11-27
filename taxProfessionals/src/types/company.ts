@@ -28,13 +28,13 @@ export interface CompanyRegistrationData {
   companyName: string;
   companyEmail: string;
   password: string;
-  numberOfApplicants: number;
+  numberOfApplicants?: number;
   provinceId: number;
   districtId: number;
   sectorId: number;
   cellId: number;
   villageId: number;
-  applicants: Array<{
+  applicants?: Array<{
     nid: string;
     fullName: string;
     phoneNumber: string;

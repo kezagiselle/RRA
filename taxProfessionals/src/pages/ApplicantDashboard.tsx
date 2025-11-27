@@ -104,15 +104,6 @@ export default function ApplicantDashboard() {
         // Individual account - set application data
         const appData = userData as unknown as Application;
         setApplication(appData);
-
-        // Debug logging for rejection status
-        console.log("=== REJECTION DEBUG INFO ===");
-        console.log("Application Status:", appData.status);
-        console.log("Rejection Count:", appData.rejectionCount);
-        console.log("Has Reapplied:", appData.hasReapplied);
-        console.log("Rejection Reason:", appData.rejectionReason);
-        console.log("Full User Data:", appData);
-        console.log("============================");
       } catch (err: any) {
         console.error("Dashboard: Error fetching application:", err);
 
@@ -461,11 +452,7 @@ export default function ApplicantDashboard() {
     if (!application) return false;
     if (application.status !== ApplicationStatus.REJECTED) return false;
     const rejectionCount = application.rejectionCount ?? 0;
-    const result = rejectionCount === 1;
-    console.log(
-      `isFirstRejectionLocal: rejectionCount=${rejectionCount}, result=${result}`
-    );
-    return result;
+    return rejectionCount === 1;
   };
 
   // Local check for second rejection
@@ -474,11 +461,7 @@ export default function ApplicantDashboard() {
     if (!application) return false;
     if (application.status !== ApplicationStatus.REJECTED) return false;
     const rejectionCount = application.rejectionCount ?? 0;
-    const result = rejectionCount >= 2;
-    console.log(
-      `isSecondRejectionLocal: rejectionCount=${rejectionCount}, result=${result}`
-    );
-    return result;
+    return rejectionCount >= 2;
   };
 
   // Check if document updates are allowed
@@ -570,9 +553,10 @@ export default function ApplicantDashboard() {
     );
   }
 
-  // Check if user can upload documents (only when status is REGISTERED)
+  // Check if user can upload documents (only when status is REGISTERED and no documents uploaded yet)
   const canUploadDocuments =
-    application.status === ApplicationStatus.REGISTERED;
+    application.status === ApplicationStatus.REGISTERED &&
+    documents.length === 0;
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
@@ -804,17 +788,31 @@ export default function ApplicantDashboard() {
                 </div>
 
                 {/* Status-specific Messages and Actions */}
-                {application.status === ApplicationStatus.REGISTERED && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                    <div className="flex items-start">
-                      <Upload className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
-                      <p className="text-sm text-blue-800">
-                        Your application is registered. Please upload all
-                        required documents to proceed with your application.
-                      </p>
+                {application.status === ApplicationStatus.REGISTERED &&
+                  documents.length === 0 && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                      <div className="flex items-start">
+                        <Upload className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+                        <p className="text-sm text-blue-800">
+                          Your application is registered. Please upload all
+                          required documents to proceed with your application.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                {application.status === ApplicationStatus.REGISTERED &&
+                  documents.length > 0 && (
+                    <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                      <div className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3" />
+                        <p className="text-sm text-green-800">
+                          Your documents have been submitted successfully. Your
+                          application is being processed.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                 {application.status === ApplicationStatus.PENDING && (
                   <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">

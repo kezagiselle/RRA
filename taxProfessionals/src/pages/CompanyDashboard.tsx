@@ -11,6 +11,7 @@ import {
   Plus,
   Upload,
   Users,
+  Eye,
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
@@ -56,7 +57,7 @@ export default function CompanyDashboard() {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) {
-          navigate("/login");
+          navigate("/");
           return;
         }
 
@@ -64,8 +65,6 @@ export default function CompanyDashboard() {
         setError(null);
 
         const response = await getCurrentUser();
-        console.log("CompanyDashboard: User data:", response.data);
-
         const userData = response.data.data;
 
         // Check if this is a company account by checking for tinCompany field
@@ -77,7 +76,7 @@ export default function CompanyDashboard() {
 
         // Create CompanyAccount object from response data
         const companyData: CompanyAccount = {
-          companyId: userData.companyId || 0, // Use companyId if available, otherwise 0
+          companyId: userData.companyId || 0,
           companyTin: userData.tinCompany,
           companyName: userData.companyName || "",
           companyEmail: userData.companyEmail || userData.email || "",
@@ -92,7 +91,6 @@ export default function CompanyDashboard() {
         }
 
         // Try to fetch company members from API (only if companyId is available and > 0)
-        // This endpoint might not be implemented yet, so we handle errors gracefully
         if (companyData.companyId && companyData.companyId > 0) {
           try {
             const membersResponse = await getCompanyMembers(
@@ -105,15 +103,10 @@ export default function CompanyDashboard() {
               setMembers(membersResponse.data.data);
             }
           } catch (err: any) {
-            // Endpoint might not exist yet (401/404) - this is expected if backend hasn't implemented it
-            if (err.response?.status === 401 || err.response?.status === 404) {
-              console.log(
-                "CompanyDashboard: Members endpoint not available yet, using members from response"
-              );
-            } else {
+            // Endpoint might not exist yet (401/404) - this is expected
+            if (err.response?.status !== 401 && err.response?.status !== 404) {
               console.error("CompanyDashboard: Error fetching members:", err);
             }
-            // Members from response are already set above, so we're good
           }
         }
       } catch (err: any) {
@@ -122,7 +115,7 @@ export default function CompanyDashboard() {
         if (err.response?.status === 401) {
           localStorage.removeItem("authToken");
           localStorage.removeItem("tinNumber");
-          navigate("/login");
+          navigate("/");
         } else {
           setError(
             err.response?.data?.message ||
@@ -145,7 +138,7 @@ export default function CompanyDashboard() {
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("tinNumber");
-    navigate("/login");
+    navigate("/");
   };
 
   const handleAddMember = () => {
@@ -181,7 +174,7 @@ export default function CompanyDashboard() {
             {error || "Failed to load company data"}
           </p>
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/")}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
           >
             Go to Login
@@ -423,16 +416,30 @@ export default function CompanyDashboard() {
                                 className="flex items-center justify-center"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <button
-                                  onClick={() => handleUploadForMember(member)}
-                                  className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
-                                  title="Upload documents for this member"
-                                >
-                                  <Upload
-                                    size={16}
-                                    className="group-hover:scale-110 transition-transform"
-                                  />
-                                </button>
+                                {/* Show upload button when status is REGISTERED (no documents submitted yet) */}
+                                {(!member.status || member.status === ApplicationStatus.REGISTERED) ? (
+                                  <button
+                                    onClick={() => handleUploadForMember(member)}
+                                    className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                    title="Upload documents for this member"
+                                  >
+                                    <Upload
+                                      size={16}
+                                      className="group-hover:scale-110 transition-transform"
+                                    />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => setSelectedMemberForDetails(member)}
+                                    className="p-2.5 bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 group"
+                                    title="View member details"
+                                  >
+                                    <Eye
+                                      size={16}
+                                      className="group-hover:scale-110 transition-transform"
+                                    />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
