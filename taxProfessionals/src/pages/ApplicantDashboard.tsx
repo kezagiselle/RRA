@@ -26,14 +26,13 @@ import { getAllDocuments } from "../services/getDocuments";
 import { downloadCertificate } from "../services/downloadCertificate";
 import { viewDocument } from "../services/viewDocument";
 import { updateDocument } from "../services/updateDocument";
+import { resubmitApplication } from "../services/resubmitApplication";
 
 // ✅ FIX: Use type-only imports
 import type { Application } from "../types/application";
 import {
   ApplicationStatus,
   canResubmitApplication,
-  isFirstRejection,
-  isSecondRejection,
   getResubmissionBlockedMessage,
 } from "../types/application";
 import { AccountType } from "../types/company";
@@ -71,6 +70,9 @@ export default function ApplicantDashboard() {
   const [actionType, setActionType] = useState<
     "view" | "download" | "replace" | null
   >(null);
+  const [updatedDocumentIds, setUpdatedDocumentIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const navigate = useNavigate();
   const mainContentRef = useRef<HTMLElement>(null);
@@ -100,7 +102,17 @@ export default function ApplicantDashboard() {
         }
 
         // Individual account - set application data
-        setApplication(userData as unknown as Application);
+        const appData = userData as unknown as Application;
+        setApplication(appData);
+
+        // Debug logging for rejection status
+        console.log("=== REJECTION DEBUG INFO ===");
+        console.log("Application Status:", appData.status);
+        console.log("Rejection Count:", appData.rejectionCount);
+        console.log("Has Reapplied:", appData.hasReapplied);
+        console.log("Rejection Reason:", appData.rejectionReason);
+        console.log("Full User Data:", appData);
+        console.log("============================");
       } catch (err: any) {
         console.error("Dashboard: Error fetching application:", err);
 
@@ -167,15 +179,48 @@ export default function ApplicantDashboard() {
     }
   };
 
-  const handleReapply = () => {
+  const [resubmitting, setResubmitting] = useState(false);
+
+  const handleResubmit = async () => {
+    if (!application) return;
+
     // Check if resubmission is allowed
     if (!canResubmitApplication(application)) {
       showToast(getResubmissionBlockedMessage(false), "error");
       return;
     }
 
-    // Navigate to document upload page for reapplication
-    navigate("/documents");
+    const confirmed = window.confirm(
+      "⚠️ IMPORTANT: This is your ONE-TIME resubmission opportunity.\n\n" +
+        "Are you sure you want to resubmit your application? All documents (including updated ones) will be resubmitted for review.\n\n" +
+        "If your application is rejected again after this resubmission, you will NOT be able to resubmit a third time and will need to contact RRA for guidance.\n\n" +
+        "Click OK to proceed with resubmission, or Cancel to go back."
+    );
+    if (!confirmed) return;
+
+    try {
+      setResubmitting(true);
+
+      await resubmitApplication(application.tpin);
+
+      // Refresh application data to get updated status
+      const response = await getCurrentUser();
+      const userData = response.data.data;
+      setApplication(userData as unknown as Application);
+
+      showToast(
+        "Application resubmitted successfully. Your application is now pending review.",
+        "success"
+      );
+    } catch (err: any) {
+      console.error("Dashboard: Error resubmitting application:", err);
+      showToast(
+        err.response?.data?.message || "Failed to resubmit application",
+        "error"
+      );
+    } finally {
+      setResubmitting(false);
+    }
   };
 
   const handleDownloadCertificate = async () => {
@@ -284,7 +329,7 @@ export default function ApplicantDashboard() {
 
     // ==================== REJECTION LIMIT VALIDATION ====================
     // Block updates on second rejection
-    if (isSecondRejection(application)) {
+    if (isSecondRejectionLocal()) {
       showToast(
         "Document updates are not allowed. Your application has been rejected for the second time with no further resubmissions allowed. Please contact RRA for assistance.",
         "error"
@@ -318,7 +363,13 @@ export default function ApplicantDashboard() {
         setProcessingDocId(docId);
         setActionType("replace");
 
+        // Check if this is a problematic document before updating
+        const wasProblematic = isProblematicDocument(docId);
+
         await updateDocument(docId, file, documentType);
+
+        // Track this document as updated
+        setUpdatedDocumentIds((prev) => new Set(prev).add(docId));
 
         // Refresh documents list
         if (application) {
@@ -326,7 +377,14 @@ export default function ApplicantDashboard() {
           setDocuments(response.data.data || []);
         }
 
-        showToast("Document replaced successfully", "success");
+        if (wasProblematic) {
+          showToast(
+            "Document updated successfully. You can now resubmit your application.",
+            "success"
+          );
+        } else {
+          showToast("Document replaced successfully", "success");
+        }
       } catch (err: any) {
         console.error("Dashboard: Error replacing document:", err);
         showToast(
@@ -397,6 +455,32 @@ export default function ApplicantDashboard() {
   };
 
   // ==================== REJECTION STATUS HELPER FUNCTIONS ====================
+  // Local check for first rejection
+  // First rejection: rejectionCount === 1
+  const isFirstRejectionLocal = (): boolean => {
+    if (!application) return false;
+    if (application.status !== ApplicationStatus.REJECTED) return false;
+    const rejectionCount = application.rejectionCount ?? 0;
+    const result = rejectionCount === 1;
+    console.log(
+      `isFirstRejectionLocal: rejectionCount=${rejectionCount}, result=${result}`
+    );
+    return result;
+  };
+
+  // Local check for second rejection
+  // Second rejection: rejectionCount >= 2
+  const isSecondRejectionLocal = (): boolean => {
+    if (!application) return false;
+    if (application.status !== ApplicationStatus.REJECTED) return false;
+    const rejectionCount = application.rejectionCount ?? 0;
+    const result = rejectionCount >= 2;
+    console.log(
+      `isSecondRejectionLocal: rejectionCount=${rejectionCount}, result=${result}`
+    );
+    return result;
+  };
+
   // Check if document updates are allowed
   const canUpdateDocuments = (): boolean => {
     if (!application) return false;
@@ -409,9 +493,9 @@ export default function ApplicantDashboard() {
       return true;
     }
 
-    // Allow updates only for first rejection
+    // Allow updates only for first rejection (using local check)
     if (application.status === ApplicationStatus.REJECTED) {
-      return isFirstRejection(application);
+      return isFirstRejectionLocal();
     }
 
     return false;
@@ -430,6 +514,29 @@ export default function ApplicantDashboard() {
       application?.problematicDocumentIds &&
       application.problematicDocumentIds.length > 0
     );
+  };
+
+  // Check if all problematic documents have been updated
+  const allProblematicDocsUpdated = (): boolean => {
+    if (!hasProblematicDocuments()) return false;
+    return (
+      application?.problematicDocumentIds?.every((docId) =>
+        updatedDocumentIds.has(docId)
+      ) ?? false
+    );
+  };
+
+  // Check if document was updated in this session
+  const isDocumentUpdated = (docId: number): boolean => {
+    return updatedDocumentIds.has(docId);
+  };
+
+  // Check if user can resubmit (first rejection AND has updated at least one problematic doc)
+  const canShowResubmitButton = (): boolean => {
+    if (!isFirstRejectionLocal()) return false;
+    // Show resubmit button if there are no problematic docs OR if at least one has been updated
+    if (!hasProblematicDocuments()) return true;
+    return updatedDocumentIds.size > 0;
   };
   // ========================================================================
 
@@ -786,7 +893,7 @@ export default function ApplicantDashboard() {
                     </div>
 
                     {/* ==================== SECOND REJECTION - NO RESUBMISSION ==================== */}
-                    {isSecondRejection(application) ? (
+                    {isSecondRejectionLocal() ? (
                       <>
                         {/* Second Rejection Banner */}
                         <div className="bg-red-50 border border-red-300 rounded-lg p-4">
@@ -860,6 +967,19 @@ export default function ApplicantDashboard() {
                           </div>
                         </div>
 
+                        {/* Show message when all problematic docs are updated */}
+                        {allProblematicDocsUpdated() && (
+                          <div className="bg-green-50 border border-green-300 rounded-lg p-4">
+                            <div className="flex items-center space-x-2">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <p className="text-sm text-green-800 font-medium">
+                                All problematic documents have been updated. You
+                                can now resubmit your application.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Action Buttons for First Rejection */}
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
                           <button
@@ -883,13 +1003,29 @@ export default function ApplicantDashboard() {
                             )}
                           </button>
 
-                          <button
-                            onClick={handleReapply}
-                            className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
-                          >
-                            <RefreshCw size={20} />
-                            <span>Reapply with New Documents</span>
-                          </button>
+                          {/* Show Resubmit button only when documents have been updated */}
+                          {canShowResubmitButton() && (
+                            <button
+                              onClick={handleResubmit}
+                              disabled={resubmitting}
+                              className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                            >
+                              {resubmitting ? (
+                                <>
+                                  <LoadingSpinner
+                                    size="sm"
+                                    className="text-white"
+                                  />
+                                  <span>Resubmitting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw size={20} />
+                                  <span>Resubmit Application</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </>
                     )}
@@ -906,7 +1042,7 @@ export default function ApplicantDashboard() {
                   My Documents
                 </h2>
                 {/* Show problematic documents count for first rejection */}
-                {isFirstRejection(application) && hasProblematicDocuments() && (
+                {isFirstRejectionLocal() && hasProblematicDocuments() && (
                   <p className="text-sm text-purple-700 mt-1">
                     {application.problematicDocumentIds?.length} document
                     {application.problematicDocumentIds?.length !== 1
@@ -962,6 +1098,7 @@ export default function ApplicantDashboard() {
                           const isProblematic = isProblematicDocument(
                             doc.docId
                           );
+                          const wasUpdated = isDocumentUpdated(doc.docId);
                           const canReplace =
                             canUpdateDocuments() &&
                             (!hasProblematicDocuments() || isProblematic);
@@ -970,19 +1107,26 @@ export default function ApplicantDashboard() {
                             <tr
                               key={doc.docId}
                               className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                                isProblematic
+                                isProblematic && !wasUpdated
                                   ? "bg-red-50 border-l-4 border-l-red-500"
+                                  : wasUpdated
+                                  ? "bg-green-50 border-l-4 border-l-green-500"
                                   : ""
                               }`}
                             >
                               <td className="px-4 py-4">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 flex-wrap gap-1">
                                   <span className="text-sm font-medium text-gray-800">
                                     {getDocumentLabel(doc)}
                                   </span>
                                   {isProblematic && (
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
                                       Needs Update
+                                    </span>
+                                  )}
+                                  {wasUpdated && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
+                                      ✓ Updated
                                     </span>
                                   )}
                                 </div>
@@ -1034,59 +1178,56 @@ export default function ApplicantDashboard() {
                                   </button>
 
                                   {/* ==================== REPLACE BUTTON WITH REJECTION LIMIT CHECK ==================== */}
+                                  {/* Only show replace/update buttons if NOT second rejection and NOT approved */}
                                   {application.status !==
-                                    ApplicationStatus.APPROVED && (
-                                    <>
-                                      {canReplace ? (
-                                        <button
-                                          onClick={() =>
-                                            handleReplaceDocument(
-                                              doc.docId,
-                                              doc.documentType
-                                            )
-                                          }
-                                          disabled={
-                                            processingDocId === doc.docId &&
-                                            actionType === "replace"
-                                          }
-                                          className={`p-2 ${
-                                            isProblematic
-                                              ? "bg-red-500 hover:bg-red-600"
-                                              : "bg-orange-500 hover:bg-orange-600"
-                                          } disabled:bg-gray-400 text-white rounded-lg transition-colors`}
-                                          title={
-                                            isProblematic
-                                              ? "Update problematic document"
-                                              : "Replace document"
-                                          }
-                                        >
-                                          {processingDocId === doc.docId &&
-                                          actionType === "replace" ? (
-                                            <LoadingSpinner size="sm" />
-                                          ) : (
-                                            <RefreshCw size={16} />
-                                          )}
-                                        </button>
-                                      ) : (
-                                        /* Show disabled button for second rejection or non-problematic docs */
-                                        (isSecondRejection(application) ||
-                                          (hasProblematicDocuments() &&
-                                            !isProblematic)) && (
+                                    ApplicationStatus.APPROVED &&
+                                    !isSecondRejectionLocal() && (
+                                      <>
+                                        {canReplace ? (
                                           <button
-                                            disabled
-                                            className="p-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
+                                            onClick={() =>
+                                              handleReplaceDocument(
+                                                doc.docId,
+                                                doc.documentType
+                                              )
+                                            }
+                                            disabled={
+                                              processingDocId === doc.docId &&
+                                              actionType === "replace"
+                                            }
+                                            className={`p-2 ${
+                                              isProblematic
+                                                ? "bg-red-500 hover:bg-red-600"
+                                                : "bg-orange-500 hover:bg-orange-600"
+                                            } disabled:bg-gray-400 text-white rounded-lg transition-colors`}
                                             title={
-                                              isSecondRejection(application)
-                                                ? "Updates not allowed after second rejection"
-                                                : "Only problematic documents can be updated"
+                                              isProblematic
+                                                ? "Update problematic document"
+                                                : "Replace document"
                                             }
                                           >
-                                            <RefreshCw size={16} />
+                                            {processingDocId === doc.docId &&
+                                            actionType === "replace" ? (
+                                              <LoadingSpinner size="sm" />
+                                            ) : (
+                                              <RefreshCw size={16} />
+                                            )}
                                           </button>
-                                        )
-                                      )}
-                                    </>
-                                  )}
+                                        ) : (
+                                          /* Show disabled button only for non-problematic docs during first rejection */
+                                          hasProblematicDocuments() &&
+                                          !isProblematic && (
+                                            <button
+                                              disabled
+                                              className="p-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
+                                              title="Only problematic documents can be updated"
+                                            >
+                                              <RefreshCw size={16} />
+                                            </button>
+                                          )
+                                        )}
+                                      </>
+                                    )}
                                   {/* ==================== END REPLACE BUTTON ==================== */}
                                 </div>
                               </td>
