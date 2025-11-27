@@ -1,3 +1,5 @@
+// src/components/MemberDetailsModal.tsx
+
 import React, { useState, useEffect } from "react";
 import {
   X,
@@ -17,7 +19,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { CompanyMember, CompanyAccount } from "../types/company";
 import type { Application } from "../types/application";
-import { ApplicationStatus } from "../types/application";
+import {
+  ApplicationStatus,
+  isFirstRejection as checkIsFirstRejection,
+  isSecondRejection as checkIsSecondRejection,
+  canResubmitApplication,
+  getResubmissionBlockedMessage,
+} from "../types/application";
 import type { Document as DocumentType } from "../types/document";
 import {
   DOCUMENT_TYPE_LABELS,
@@ -109,7 +117,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ ...toast, show: false }), 3000);
+    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 5000);
   };
 
   const handleViewDocument = async (docId: number) => {
@@ -179,19 +187,21 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
   const handleReplaceDocument = async (docId: number, documentType: string) => {
     if (!application) return;
 
-    // If there are problematic documents, only allow updating problematic documents
-    if (hasProblematicDocuments && !isProblematicDocument(docId)) {
+    // ==================== REJECTION LIMIT VALIDATION ====================
+    // Block updates on second rejection using helper function
+    if (checkIsSecondRejection(application)) {
       showToast(
-        "You can only update documents that were flagged as problematic",
+        getResubmissionBlockedMessage(true), // true = company member
         "error"
       );
       return;
     }
+    // ====================================================================
 
-    // Check if updates are allowed
-    if (!canUpdateDocuments) {
+    // If there are problematic documents, only allow updating problematic documents
+    if (hasProblematicDocuments && !isProblematicDocument(docId)) {
       showToast(
-        "Document updates are not allowed for this application status",
+        "You can only update documents that were flagged as problematic",
         "error"
       );
       return;
@@ -332,8 +342,22 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
   const handleResubmit = async () => {
     if (!application) return;
 
+    // ==================== REJECTION LIMIT VALIDATION ====================
+    // Check if resubmission is allowed using helper function
+    if (!canResubmitApplication(application)) {
+      showToast(
+        getResubmissionBlockedMessage(true), // true = company member
+        "error"
+      );
+      return;
+    }
+    // ====================================================================
+
     const confirmed = window.confirm(
-      "Are you sure you want to resubmit your application? All documents (including updated ones) will be resubmitted for review."
+      "⚠️ IMPORTANT: This is your ONE-TIME resubmission opportunity.\n\n" +
+        "Are you sure you want to resubmit your application? All documents (including updated ones) will be resubmitted for review.\n\n" +
+        "If your application is rejected again after this resubmission, you will NOT be able to resubmit a third time and will need to contact RRA for guidance.\n\n" +
+        "Click OK to proceed with resubmission, or Cancel to go back."
     );
     if (!confirmed) return;
 
@@ -420,13 +444,14 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
     return application.problematicDocumentIds.includes(docId);
   };
 
-  // Check if this is first rejection (REJECTED and hasn't reapplied)
-  const isFirstRejection =
-    application?.status === ApplicationStatus.REJECTED &&
-    !application?.hasReapplied;
+  // ==================== REJECTION STATUS CHECKS USING HELPER FUNCTIONS ====================
+  // Check if this is first rejection (rejectionCount = 1) using helper function
+  const isFirstRejection = checkIsFirstRejection(application);
 
-  // Check if there are still problematic documents that need updating
-  // Allow updating problematic documents whenever they exist (first or subsequent rejection)
+  // Check if this is second rejection (rejectionCount >= 2) using helper function
+  const isSecondRejection = checkIsSecondRejection(application);
+
+  // Check if there are problematic documents
   const hasProblematicDocuments =
     application?.status === ApplicationStatus.REJECTED &&
     application?.problematicDocumentIds &&
@@ -439,42 +464,43 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
       updatedDocumentIds.has(docId)
     );
 
-  // Check if all problematic documents have been updated (for first rejection)
+  // Check if all problematic documents have been updated (backend cleared the list)
   const allProblematicDocsUpdated =
     isFirstRejection &&
     (!application?.problematicDocumentIds ||
       application.problematicDocumentIds.length === 0);
 
-  // Check if member can resubmit
-  // Allow resubmit when:
-  // 1. All problematic documents have been updated locally (all IDs in problematicDocumentIds are in updatedDocumentIds)
-  // 2. OR for subsequent rejections without problematic documents (hasReapplied is true and no new problematic documents)
+  // Check if member can resubmit using helper function
+  // Must be first rejection AND (all docs updated locally OR backend cleared problematic list)
   const canResubmit =
-    (application?.status === ApplicationStatus.REJECTED &&
-      allProblematicDocsUpdatedLocally) ||
-    (application?.status === ApplicationStatus.REJECTED &&
-      application?.hasReapplied &&
-      !hasProblematicDocuments);
+    canResubmitApplication(application) &&
+    (allProblematicDocsUpdatedLocally || allProblematicDocsUpdated);
 
-  // Check if document updates are allowed (PENDING, REGISTERED, or REJECTED with problematic documents)
-  // Allow updates when there are problematic documents, regardless of first or subsequent rejection
+  // Check if document updates are allowed
   const canUpdateDocuments =
     application?.status === ApplicationStatus.PENDING ||
     application?.status === ApplicationStatus.REGISTERED ||
-    hasProblematicDocuments;
+    isFirstRejection;
 
   // Count remaining problematic documents
   const remainingProblematicDocs = hasProblematicDocuments
     ? documents.filter((doc) => isProblematicDocument(doc.docId)).length
     : 0;
+  // ========================================================================================
 
   // Debug logging for problematic documents
   useEffect(() => {
     if (application && isOpen) {
       console.log("=== MemberDetailsModal Debug Info ===");
       console.log("Application Status:", application.status);
+      console.log("Rejection Count:", application.rejectionCount);
       console.log("Has Reapplied:", application.hasReapplied);
       console.log("Is First Rejection:", isFirstRejection);
+      console.log("Is Second Rejection:", isSecondRejection);
+      console.log(
+        "Can Resubmit Application:",
+        canResubmitApplication(application)
+      );
       console.log(
         "Problematic Document IDs:",
         application.problematicDocumentIds
@@ -485,7 +511,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
         "All Problematic Docs Updated Locally:",
         allProblematicDocsUpdatedLocally
       );
-      console.log("Can Resubmit:", canResubmit);
+      console.log("Can Resubmit (final):", canResubmit);
       console.log("Can Update Documents:", canUpdateDocuments);
       console.log("Documents Count:", documents.length);
       console.log(
@@ -507,6 +533,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
     documents,
     updatedDocumentIds,
     isFirstRejection,
+    isSecondRejection,
     hasProblematicDocuments,
     allProblematicDocsUpdatedLocally,
     canResubmit,
@@ -693,20 +720,25 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       </div>
                     )}
 
-                  {/* First Rejection Info Banner */}
+                  {/* ==================== FIRST REJECTION - CAN RESUBMIT ONCE ==================== */}
                   {isFirstRejection && (
                     <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start space-x-3">
                         <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
                           <h4 className="text-sm font-semibold text-blue-800 mb-2">
-                            Update Required Documents
+                            Update Required Documents - One Resubmission Allowed
                           </h4>
+                          <p className="text-sm text-orange-700 font-medium mb-2">
+                            ⚠️ You have <strong>ONE</strong> resubmission
+                            opportunity. If rejected again, no further
+                            resubmissions will be allowed.
+                          </p>
                           {allProblematicDocsUpdatedLocally ? (
                             <p className="text-sm text-blue-700 mb-2">
-                              All problematic documents have been updated. Click
-                              "Resubmit Application" to submit all documents for
-                              review.
+                              ✅ All problematic documents have been updated.
+                              Click "Resubmit Application" to submit all
+                              documents for review.
                             </p>
                           ) : hasUpdatedProblematicDoc ? (
                             <p className="text-sm text-blue-700 mb-2">
@@ -723,7 +755,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                               </p>
                               {remainingProblematicDocs > 0 && (
                                 <p className="text-sm font-medium text-blue-800">
-                                  {remainingProblematicDocs} document
+                                  📋 {remainingProblematicDocs} document
                                   {remainingProblematicDocs !== 1
                                     ? "s"
                                     : ""}{" "}
@@ -733,17 +765,19 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                             </>
                           ) : (
                             <p className="text-sm text-blue-700 mb-2">
-                              All problematic documents have been updated. You
-                              can now resubmit your application.
+                              ✅ All problematic documents have been updated.
+                              You can now resubmit your application.
                             </p>
                           )}
                         </div>
                       </div>
                     </div>
                   )}
+                  {/* ================================================================================ */}
 
                   {/* Action Buttons */}
                   <div className="mt-4 flex flex-wrap gap-3">
+                    {/* Download Certificate - APPROVED */}
                     {application.status === ApplicationStatus.APPROVED && (
                       <button
                         onClick={handleDownloadCertificate}
@@ -764,6 +798,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       </button>
                     )}
 
+                    {/* Download Rejection Letter - REJECTED (always show for rejected) */}
                     {application.status === ApplicationStatus.REJECTED && (
                       <button
                         onClick={handleDownloadCertificate}
@@ -784,34 +819,36 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       </button>
                     )}
 
-                    {/* Show "Update Documents" button during first rejection until all docs are updated */}
-                    {isFirstRejection && !allProblematicDocsUpdatedLocally && (
-                      <button
-                        onClick={() => {
-                          // Scroll to documents section
-                          const documentsSection = document.querySelector(
-                            "[data-documents-section]"
-                          );
-                          if (documentsSection) {
-                            documentsSection.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start",
-                            });
-                          }
-                        }}
-                        className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
-                      >
-                        <RefreshCw size={20} />
-                        <span>Update Documents</span>
-                        {remainingProblematicDocs > 0 && (
-                          <span className="ml-2 px-2 py-0.5 bg-orange-700 rounded text-xs">
-                            {remainingProblematicDocs} remaining
-                          </span>
-                        )}
-                      </button>
-                    )}
+                    {/* Update Documents button - FIRST REJECTION with problematic docs */}
+                    {isFirstRejection &&
+                      hasProblematicDocuments &&
+                      !allProblematicDocsUpdatedLocally && (
+                        <button
+                          onClick={() => {
+                            // Scroll to documents section
+                            const documentsSection = document.querySelector(
+                              "[data-documents-section]"
+                            );
+                            if (documentsSection) {
+                              documentsSection.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }
+                          }}
+                          className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
+                        >
+                          <RefreshCw size={20} />
+                          <span>Update Documents</span>
+                          {remainingProblematicDocs > 0 && (
+                            <span className="ml-2 px-2 py-0.5 bg-orange-700 rounded text-xs">
+                              {remainingProblematicDocs} remaining
+                            </span>
+                          )}
+                        </button>
+                      )}
 
-                    {/* Show "Resubmit Application" button after updating all problematic documents locally OR for subsequent rejections */}
+                    {/* Resubmit Application button - Only for FIRST REJECTION after all docs updated */}
                     {canResubmit && (
                       <button
                         onClick={handleResubmit}
@@ -854,7 +891,14 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       )}
                     {allProblematicDocsUpdated && (
                       <p className="text-sm text-green-700 mt-1 font-medium">
-                        All problematic documents updated. Ready to resubmit.
+                        ✅ All problematic documents updated. Ready to resubmit.
+                      </p>
+                    )}
+                    {/* Show message for second rejection */}
+                    {isSecondRejection && (
+                      <p className="text-sm text-red-600 mt-1 font-medium">
+                        ⚠️ Document updates are not allowed after second
+                        rejection.
                       </p>
                     )}
                   </div>
@@ -892,31 +936,29 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                               const isProblematic = isProblematicDocument(
                                 doc.docId
                               );
-                              // Determine if replace button should be shown
+
+                              // ==================== DETERMINE IF REPLACE BUTTON SHOULD SHOW ====================
                               let canReplace = false;
 
-                              if (hasProblematicDocuments) {
-                                // When there are problematic documents: show replace button only for problematic documents
+                              // Second rejection: NO replace allowed
+                              if (isSecondRejection) {
+                                canReplace = false;
+                              } else if (hasProblematicDocuments) {
+                                // First rejection with problematic documents: only problematic docs can be replaced
                                 canReplace = isProblematic;
                               } else if (isFirstRejection) {
-                                // During first rejection without problematic documents: show for all documents
+                                // First rejection without problematic documents: all docs can be replaced
                                 canReplace = true;
                               } else {
-                                // For PENDING or REGISTERED status: show replace button for all documents
+                                // PENDING or REGISTERED status: all documents can be replaced
                                 canReplace = canUpdateDocuments;
                               }
+                              // ================================================================================
 
                               // Check if this document was updated (tracked in updatedDocumentIds)
                               const wasUpdated = updatedDocumentIds.has(
                                 doc.docId
                               );
-
-                              // Debug logging for problematic documents
-                              if (isProblematic) {
-                                console.log(
-                                  `Document ${doc.docId} (${doc.documentType}): canReplace = ${canReplace}, isProblematic = ${isProblematic}, hasProblematicDocuments = ${hasProblematicDocuments}, canUpdateDocuments = ${canUpdateDocuments}`
-                                );
-                              }
 
                               return (
                                 <tr
@@ -941,7 +983,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                                       )}
                                       {wasUpdated && (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
-                                          Updated
+                                          ✓ Updated
                                         </span>
                                       )}
                                     </div>
@@ -951,6 +993,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex items-center justify-center space-x-2">
+                                      {/* View Button - Always available */}
                                       <button
                                         onClick={() =>
                                           handleViewDocument(doc.docId)
@@ -969,6 +1012,8 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                                           <Eye size={14} />
                                         )}
                                       </button>
+
+                                      {/* Download Button - Always available */}
                                       <button
                                         onClick={() =>
                                           handleDownloadDocument(
@@ -990,56 +1035,61 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                                           <Download size={14} />
                                         )}
                                       </button>
-                                      {canReplace ? (
-                                        <button
-                                          onClick={() => {
-                                            console.log(
-                                              `Replace button clicked for document ${doc.docId}`
-                                            );
-                                            handleReplaceDocument(
-                                              doc.docId,
-                                              doc.documentType
-                                            );
-                                          }}
-                                          disabled={
-                                            processingDocId === doc.docId &&
-                                            actionType === "replace"
-                                          }
-                                          className={`p-1.5 ${
-                                            isProblematic
-                                              ? "bg-red-500 hover:bg-red-600"
-                                              : "bg-orange-500 hover:bg-orange-600"
-                                          } disabled:bg-gray-400 text-white rounded transition-colors`}
-                                          title={
-                                            isProblematic
-                                              ? "Update problematic document"
-                                              : "Replace document"
-                                          }
-                                        >
-                                          {processingDocId === doc.docId &&
-                                          actionType === "replace" ? (
-                                            <LoadingSpinner size="sm" />
+
+                                      {/* ==================== REPLACE BUTTON WITH REJECTION LIMIT CHECK ==================== */}
+                                      {application.status !==
+                                        ApplicationStatus.APPROVED && (
+                                        <>
+                                          {canReplace ? (
+                                            <button
+                                              onClick={() =>
+                                                handleReplaceDocument(
+                                                  doc.docId,
+                                                  doc.documentType
+                                                )
+                                              }
+                                              disabled={
+                                                processingDocId === doc.docId &&
+                                                actionType === "replace"
+                                              }
+                                              className={`p-1.5 ${
+                                                isProblematic
+                                                  ? "bg-red-500 hover:bg-red-600"
+                                                  : "bg-orange-500 hover:bg-orange-600"
+                                              } disabled:bg-gray-400 text-white rounded transition-colors`}
+                                              title={
+                                                isProblematic
+                                                  ? "Update problematic document"
+                                                  : "Replace document"
+                                              }
+                                            >
+                                              {processingDocId === doc.docId &&
+                                              actionType === "replace" ? (
+                                                <LoadingSpinner size="sm" />
+                                              ) : (
+                                                <RefreshCw size={14} />
+                                              )}
+                                            </button>
                                           ) : (
-                                            <RefreshCw size={14} />
+                                            /* Show disabled button with appropriate tooltip */
+                                            <button
+                                              disabled
+                                              className="p-1.5 bg-gray-300 text-gray-500 rounded cursor-not-allowed"
+                                              title={
+                                                isSecondRejection
+                                                  ? "Updates not allowed after second rejection"
+                                                  : hasProblematicDocuments &&
+                                                    !isProblematic
+                                                  ? "Only problematic documents can be updated"
+                                                  : "Document updates not available"
+                                              }
+                                            >
+                                              <RefreshCw size={14} />
+                                            </button>
                                           )}
-                                        </button>
-                                      ) : hasProblematicDocuments &&
-                                        !isProblematic ? (
-                                        <button
-                                          disabled
-                                          className="p-1.5 bg-gray-300 text-gray-500 rounded cursor-not-allowed"
-                                          title="Only problematic documents can be updated"
-                                        >
-                                          <RefreshCw size={14} />
-                                        </button>
-                                      ) : (
-                                        // Debug: Show why button is not showing
-                                        (isProblematic &&
-                                          console.log(
-                                            `Replace button NOT showing for document ${doc.docId}: canReplace=${canReplace}, hasProblematicDocuments=${hasProblematicDocuments}, canUpdateDocuments=${canUpdateDocuments}`
-                                          )) ||
-                                        null
+                                        </>
                                       )}
+                                      {/* =================================================================================== */}
                                     </div>
                                   </td>
                                 </tr>
@@ -1062,7 +1112,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
         <Toast
           message={toast.message}
           type={toast.type}
-          onClose={() => setToast({ ...toast, show: false })}
+          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
         />
       )}
     </>

@@ -29,7 +29,13 @@ import { updateDocument } from "../services/updateDocument";
 
 // ✅ FIX: Use type-only imports
 import type { Application } from "../types/application";
-import { ApplicationStatus } from "../types/application";
+import {
+  ApplicationStatus,
+  canResubmitApplication,
+  isFirstRejection,
+  isSecondRejection,
+  getResubmissionBlockedMessage,
+} from "../types/application";
 import { AccountType } from "../types/company";
 import type { Document as DocumentType } from "../types/document";
 import {
@@ -86,7 +92,7 @@ export default function ApplicantDashboard() {
         console.log("Dashboard: Application data:", response.data);
 
         const userData = response.data.data;
-        
+
         // Check if this is a company account by checking for tinCompany field
         if (userData.tinCompany) {
           navigate("/company-dashboard");
@@ -94,7 +100,7 @@ export default function ApplicantDashboard() {
         }
 
         // Individual account - set application data
-        setApplication(userData as Application);
+        setApplication(userData as unknown as Application);
       } catch (err: any) {
         console.error("Dashboard: Error fetching application:", err);
 
@@ -162,6 +168,12 @@ export default function ApplicantDashboard() {
   };
 
   const handleReapply = () => {
+    // Check if resubmission is allowed
+    if (!canResubmitApplication(application)) {
+      showToast(getResubmissionBlockedMessage(false), "error");
+      return;
+    }
+
     // Navigate to document upload page for reapplication
     navigate("/documents");
   };
@@ -268,6 +280,19 @@ export default function ApplicantDashboard() {
   };
 
   const handleReplaceDocument = async (docId: number, documentType: string) => {
+    if (!application) return;
+
+    // ==================== REJECTION LIMIT VALIDATION ====================
+    // Block updates on second rejection
+    if (isSecondRejection(application)) {
+      showToast(
+        "Document updates are not allowed. Your application has been rejected for the second time with no further resubmissions allowed. Please contact RRA for assistance.",
+        "error"
+      );
+      return;
+    }
+    // ====================================================================
+
     const confirmed = window.confirm(
       "Are you sure you want to replace this document?"
     );
@@ -370,6 +395,43 @@ export default function ApplicantDashboard() {
       doc.documentType as keyof typeof DOCUMENT_TYPE_LABELS
     ];
   };
+
+  // ==================== REJECTION STATUS HELPER FUNCTIONS ====================
+  // Check if document updates are allowed
+  const canUpdateDocuments = (): boolean => {
+    if (!application) return false;
+
+    // Allow updates for REGISTERED and PENDING status
+    if (
+      application.status === ApplicationStatus.REGISTERED ||
+      application.status === ApplicationStatus.PENDING
+    ) {
+      return true;
+    }
+
+    // Allow updates only for first rejection
+    if (application.status === ApplicationStatus.REJECTED) {
+      return isFirstRejection(application);
+    }
+
+    return false;
+  };
+
+  // Check if document is problematic
+  const isProblematicDocument = (docId: number): boolean => {
+    if (!application?.problematicDocumentIds) return false;
+    return application.problematicDocumentIds.includes(docId);
+  };
+
+  // Check if there are problematic documents
+  const hasProblematicDocuments = (): boolean => {
+    return !!(
+      application?.status === ApplicationStatus.REJECTED &&
+      application?.problematicDocumentIds &&
+      application.problematicDocumentIds.length > 0
+    );
+  };
+  // ========================================================================
 
   if (loading) {
     return (
@@ -694,15 +756,16 @@ export default function ApplicantDashboard() {
                   </>
                 )}
 
+                {/* ==================== REJECTED STATUS SECTION ==================== */}
                 {application.status === ApplicationStatus.REJECTED && (
                   <>
+                    {/* Rejection Reason Card - Always shown */}
                     <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
                       <div className="flex items-start">
                         <XCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3" />
                         <p className="text-sm text-red-800">
                           Your application has been rejected. Please review the
-                          reason below and you can reapply by uploading new
-                          documents.
+                          reason below.
                         </p>
                       </div>
                     </div>
@@ -722,35 +785,117 @@ export default function ApplicantDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                      <button
-                        onClick={handleDownloadCertificate}
-                        disabled={downloadingCertificate}
-                        className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
-                      >
-                        {downloadingCertificate ? (
-                          <>
-                            <LoadingSpinner size="sm" className="text-white" />
-                            <span>Downloading...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download size={20} />
-                            <span>Download Rejection Letter</span>
-                          </>
-                        )}
-                      </button>
+                    {/* ==================== SECOND REJECTION - NO RESUBMISSION ==================== */}
+                    {isSecondRejection(application) ? (
+                      <>
+                        {/* Second Rejection Banner */}
+                        <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <XCircle className="h-6 w-6 text-red-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <h4 className="text-base font-bold text-red-800 mb-2">
+                                Application Rejected - Resubmission Not
+                                Available
+                              </h4>
+                              <p className="text-sm text-red-700 mb-2">
+                                Your application has been rejected for the
+                                second time. You have already used your one-time
+                                resubmission opportunity after the first
+                                rejection.
+                              </p>
+                              <p className="text-sm text-red-700">
+                                Unfortunately, no further resubmissions are
+                                allowed for this individual application. Please
+                                contact the Rwanda Revenue Authority for
+                                guidance on how to proceed with a new
+                                application.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
-                      <button
-                        onClick={handleReapply}
-                        className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
-                      >
-                        <RefreshCw size={20} />
-                        <span>Reapply with New Documents</span>
-                      </button>
-                    </div>
+                        {/* Only Download Rejection Letter Button */}
+                        <div className="flex justify-center">
+                          <button
+                            onClick={handleDownloadCertificate}
+                            disabled={downloadingCertificate}
+                            className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                          >
+                            {downloadingCertificate ? (
+                              <>
+                                <LoadingSpinner
+                                  size="sm"
+                                  className="text-white"
+                                />
+                                <span>Downloading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download size={20} />
+                                <span>Download Rejection Letter</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      /* ==================== FIRST REJECTION - CAN RESUBMIT ==================== */
+                      <>
+                        {/* First Rejection Warning Banner */}
+                        <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <h4 className="text-sm font-bold text-orange-800 mb-2">
+                                ⚠️ Important: One Resubmission Opportunity
+                              </h4>
+                              <p className="text-sm text-orange-700">
+                                You have <strong>ONE</strong> resubmission
+                                opportunity. If your application is rejected
+                                again after resubmission, no further
+                                resubmissions will be allowed and you will need
+                                to contact RRA for guidance.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons for First Rejection */}
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                          <button
+                            onClick={handleDownloadCertificate}
+                            disabled={downloadingCertificate}
+                            className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                          >
+                            {downloadingCertificate ? (
+                              <>
+                                <LoadingSpinner
+                                  size="sm"
+                                  className="text-white"
+                                />
+                                <span>Downloading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download size={20} />
+                                <span>Download Rejection Letter</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={handleReapply}
+                            className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 shadow-md"
+                          >
+                            <RefreshCw size={20} />
+                            <span>Reapply with New Documents</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
+                {/* ==================== END REJECTED STATUS SECTION ==================== */}
               </div>
             </div>
 
@@ -760,6 +905,20 @@ export default function ApplicantDashboard() {
                 <h2 className="text-xl font-bold text-gray-800">
                   My Documents
                 </h2>
+                {/* Show problematic documents count for first rejection */}
+                {isFirstRejection(application) && hasProblematicDocuments() && (
+                  <p className="text-sm text-purple-700 mt-1">
+                    {application.problematicDocumentIds?.length} document
+                    {application.problematicDocumentIds?.length !== 1
+                      ? "s"
+                      : ""}{" "}
+                    need
+                    {application.problematicDocumentIds?.length === 1
+                      ? "s"
+                      : ""}{" "}
+                    to be updated
+                  </p>
+                )}
               </div>
 
               <div className="p-6">
@@ -799,86 +958,141 @@ export default function ApplicantDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {documents.map((doc) => (
-                          <tr
-                            key={doc.docId}
-                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                              {getDocumentLabel(doc)}
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-600">
-                              {formatDateTime(doc.uploadedAt)}
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="flex items-center justify-center space-x-2">
-                                <button
-                                  onClick={() => handleViewDocument(doc.docId)}
-                                  disabled={
-                                    processingDocId === doc.docId &&
-                                    actionType === "view"
-                                  }
-                                  className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                                  title="View document"
-                                >
-                                  {processingDocId === doc.docId &&
-                                  actionType === "view" ? (
-                                    <LoadingSpinner size="sm" />
-                                  ) : (
-                                    <Eye size={16} />
-                                  )}
-                                </button>
+                        {documents.map((doc) => {
+                          const isProblematic = isProblematicDocument(
+                            doc.docId
+                          );
+                          const canReplace =
+                            canUpdateDocuments() &&
+                            (!hasProblematicDocuments() || isProblematic);
 
-                                <button
-                                  onClick={() =>
-                                    handleDownloadDocument(
-                                      doc.docId,
-                                      doc.documentType
-                                    )
-                                  }
-                                  disabled={
-                                    processingDocId === doc.docId &&
-                                    actionType === "download"
-                                  }
-                                  className="p-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                                  title="Download document"
-                                >
-                                  {processingDocId === doc.docId &&
-                                  actionType === "download" ? (
-                                    <LoadingSpinner size="sm" />
-                                  ) : (
-                                    <Download size={16} />
+                          return (
+                            <tr
+                              key={doc.docId}
+                              className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                                isProblematic
+                                  ? "bg-red-50 border-l-4 border-l-red-500"
+                                  : ""
+                              }`}
+                            >
+                              <td className="px-4 py-4">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {getDocumentLabel(doc)}
+                                  </span>
+                                  {isProblematic && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
+                                      Needs Update
+                                    </span>
                                   )}
-                                </button>
-
-                                {application.status !==
-                                  ApplicationStatus.APPROVED && (
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-600">
+                                {formatDateTime(doc.uploadedAt)}
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center justify-center space-x-2">
                                   <button
                                     onClick={() =>
-                                      handleReplaceDocument(
+                                      handleViewDocument(doc.docId)
+                                    }
+                                    disabled={
+                                      processingDocId === doc.docId &&
+                                      actionType === "view"
+                                    }
+                                    className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    title="View document"
+                                  >
+                                    {processingDocId === doc.docId &&
+                                    actionType === "view" ? (
+                                      <LoadingSpinner size="sm" />
+                                    ) : (
+                                      <Eye size={16} />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    onClick={() =>
+                                      handleDownloadDocument(
                                         doc.docId,
                                         doc.documentType
                                       )
                                     }
                                     disabled={
                                       processingDocId === doc.docId &&
-                                      actionType === "replace"
+                                      actionType === "download"
                                     }
-                                    className="p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                                    title="Replace document"
+                                    className="p-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    title="Download document"
                                   >
                                     {processingDocId === doc.docId &&
-                                    actionType === "replace" ? (
+                                    actionType === "download" ? (
                                       <LoadingSpinner size="sm" />
                                     ) : (
-                                      <RefreshCw size={16} />
+                                      <Download size={16} />
                                     )}
                                   </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+
+                                  {/* ==================== REPLACE BUTTON WITH REJECTION LIMIT CHECK ==================== */}
+                                  {application.status !==
+                                    ApplicationStatus.APPROVED && (
+                                    <>
+                                      {canReplace ? (
+                                        <button
+                                          onClick={() =>
+                                            handleReplaceDocument(
+                                              doc.docId,
+                                              doc.documentType
+                                            )
+                                          }
+                                          disabled={
+                                            processingDocId === doc.docId &&
+                                            actionType === "replace"
+                                          }
+                                          className={`p-2 ${
+                                            isProblematic
+                                              ? "bg-red-500 hover:bg-red-600"
+                                              : "bg-orange-500 hover:bg-orange-600"
+                                          } disabled:bg-gray-400 text-white rounded-lg transition-colors`}
+                                          title={
+                                            isProblematic
+                                              ? "Update problematic document"
+                                              : "Replace document"
+                                          }
+                                        >
+                                          {processingDocId === doc.docId &&
+                                          actionType === "replace" ? (
+                                            <LoadingSpinner size="sm" />
+                                          ) : (
+                                            <RefreshCw size={16} />
+                                          )}
+                                        </button>
+                                      ) : (
+                                        /* Show disabled button for second rejection or non-problematic docs */
+                                        (isSecondRejection(application) ||
+                                          (hasProblematicDocuments() &&
+                                            !isProblematic)) && (
+                                          <button
+                                            disabled
+                                            className="p-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
+                                            title={
+                                              isSecondRejection(application)
+                                                ? "Updates not allowed after second rejection"
+                                                : "Only problematic documents can be updated"
+                                            }
+                                          >
+                                            <RefreshCw size={16} />
+                                          </button>
+                                        )
+                                      )}
+                                    </>
+                                  )}
+                                  {/* ==================== END REPLACE BUTTON ==================== */}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
