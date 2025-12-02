@@ -70,14 +70,6 @@ const SignUpPage: React.FC = () => {
   const [fax, setFax] = useState("");
   const [businessName, setBusinessName] = useState("");
 
-  // Validation state
-  const [validationTin, setValidationTin] = useState("");
-  const [validationData, setValidationData] = useState<any>(null);
-  const [category, setCategory] = useState("");
-  const [detailedAddress, setDetailedAddress] = useState("");
-  const [fax, setFax] = useState("");
-  const [businessName, setBusinessName] = useState("");
-
   const navigate = useNavigate();
 
   // Fetch provinces on mount
@@ -880,233 +872,353 @@ const SignUpPage: React.FC = () => {
           </div>
         )}
 
-        {/* Step 2a: Individual Form */}
-        {currentStep === 2 && accountType === "INDIVIDUAL" && (
-          <form onSubmit={handleIndividualSubmit} className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <p className="text-sm text-blue-800 text-center font-medium">
-                Individual Registration
-              </p>
-            </div>
-
-            {renderField(
-              <ApplicantForm
-                label="TIN"
-                value={tin}
-                onChange={(e) => setTin(e.target.value)}
-                placeholder="Enter 9-digit TIN"
-              />,
-              "tin"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="National ID"
-                value={nid}
-                onChange={(e) => setNid(e.target.value)}
-                placeholder="Enter 16-digit NID"
-              />,
-              "nid"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="Full Name"
-                icon={<FaUser />}
-                value={fullname}
-                onChange={(e) => setFullname(e.target.value)}
-                placeholder="Enter your full name"
-              />,
-              "fullname"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="Email"
-                type="email"
-                icon={<FaEnvelope />}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-              />,
-              "email"
-            )}
-
-            {renderField(
-              <div className="flex flex-col">
-                <label className="text-gray-700 font-medium mb-2">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
-                    +250
-                  </div>
-                  <input
-                    type="text"
-                    value={
-                      phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : ""
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, ""); // Only allow digits
-                      if (value.length <= 9) {
-                        setPhoneNumber("+250" + value);
-                      }
-                    }}
-                    placeholder="XXXXXXXXX"
-                    className="w-full bg-gray-50 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+        {/* Step 2: Validation and Registration Forms */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            {/* Validation Section */}
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                TIN Validation
+              </h3>
+              <div className="flex flex-col sm:flex-row gap-2 items-end">
+                <div className="flex-grow w-full">
+                  <ApplicantForm
+                    label="Enter TIN to Validate"
+                    value={validationTin}
+                    onChange={(e) => setValidationTin(e.target.value)}
+                    placeholder="Enter TIN"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
-                    <FaPhone />
-                  </span>
                 </div>
-              </div>,
-              "phoneNumber"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="Password"
-                type="password"
-                icon={<FaLock />}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create password"
-              />,
-              "password"
-            )}
-
-            <div className="border-t pt-4 mt-4">
-              <h3 className="text-md font-semibold text-gray-700 mb-3">
-                Location Information
-              </h3>
-              {renderLocationFields()}
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-full transition duration-200"
-              >
-                {loading ? "Registering..." : "Register"}
-              </button>
-            </div>
-
-            {error && (
-              <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
-                {error}
-              </p>
-            )}
-          </form>
-        )}
-
-        {/* Step 2b: Company Form */}
-        {currentStep === 2 && accountType === "COMPANY" && (
-          <form onSubmit={handleCompanySubmit} className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <p className="text-sm text-blue-800 text-center font-medium">
-                Company Registration
-              </p>
-            </div>
-
-            {/* Company Information */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="text-md font-semibold text-gray-700 flex items-center gap-2">
-                <MdBusiness className="text-blue-600" />
-                Company Information
-              </h3>
-
-              {renderField(
-                <ApplicantForm
-                  label="Company Name"
-                  icon={<FaBuilding />}
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Enter company name"
-                />,
-                "companyName"
-              )}
-
-              {renderField(
-                <ApplicantForm
-                  label="Company TIN"
-                  value={companyTin}
-                  onChange={(e) => setCompanyTin(e.target.value)}
-                  placeholder="Enter 9-digit company TIN"
-                />,
-                "companyTin"
-              )}
-
-              {renderField(
-                <ApplicantForm
-                  label="Company Email"
-                  type="email"
-                  icon={<FaEnvelope />}
-                  value={companyEmail}
-                  onChange={(e) => setCompanyEmail(e.target.value)}
-                  placeholder="Enter company email"
-                />,
-                "companyEmail"
-              )}
-
-              {renderField(
-                <ApplicantForm
-                  label="Password"
-                  type="password"
-                  icon={<FaLock />}
-                  value={companyPassword}
-                  onChange={(e) => setCompanyPassword(e.target.value)}
-                  placeholder="Create password"
-                />,
-                "companyPassword"
-              )}
-
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                  Company Location
-                </h4>
-                {renderLocationFields()}
+                <button
+                  type="button"
+                  onClick={handleValidateTin}
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 mb-0"
+                >
+                  Validate
+                </button>
               </div>
+              {error && !validationData && (
+                <p className="text-red-500 text-sm mt-2">{error}</p>
+              )}
             </div>
 
-            {/* Info about adding members later */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> You can add company members from your
-                dashboard after registration.
-              </p>
-            </div>
+            {/* Individual Form */}
+            {accountType === "INDIVIDUAL" && (
+              <form onSubmit={handleIndividualSubmit} className="space-y-4">
+                <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800 text-center font-medium">
+                    Individual Registration
+                  </p>
+                </div>
 
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-full transition duration-200"
-              >
-                {loading ? "Registering..." : "Register Company"}
-              </button>
-            </div>
+                {renderField(
+                  <ApplicantForm
+                    label="Category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="Category"
+                    disabled={!validationData || !category}
+                  />,
+                  "category"
+                )}
 
-            {error && (
-              <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
-                {error}
-              </p>
+                {renderField(
+                  <ApplicantForm
+                    label="TaxPayer - Tin"
+                    value={tin}
+                    onChange={(e) => setTin(e.target.value)}
+                    placeholder="Enter 9-digit TIN"
+                    disabled={!validationData || !tin}
+                  />,
+                  "tin"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="National-Id"
+                    value={nid}
+                    onChange={(e) => setNid(e.target.value)}
+                    placeholder="Enter 16-digit NID"
+                    disabled={!validationData || !nid}
+                  />,
+                  "nid"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Applicant - Names"
+                    icon={<FaUser />}
+                    value={fullname}
+                    onChange={(e) => setFullname(e.target.value)}
+                    placeholder="Enter your full name"
+                    disabled={!validationData || !fullname}
+                  />,
+                  "fullname"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Business-Name"
+                    icon={<MdBusiness />}
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Business Name"
+                    disabled={!validationData || !businessName}
+                  />,
+                  "businessName"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Email - Address"
+                    type="email"
+                    icon={<FaEnvelope />}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    disabled={!validationData || !email}
+                  />,
+                  "email"
+                )}
+
+                {renderField(
+                  <div className="flex flex-col">
+                    <label className="text-gray-700 font-medium mb-2">
+                      Phone - Number
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
+                        +250
+                      </div>
+                      <input
+                        type="text"
+                        value={
+                          phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : ""
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, ""); // Only allow digits
+                          if (value.length <= 9) {
+                            setPhoneNumber("+250" + value);
+                          }
+                        }}
+                        placeholder="XXXXXXXXX"
+                        disabled={!validationData || !phoneNumber}
+                        className={`w-full bg-gray-50 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none ${(!validationData || !phoneNumber) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
+                        <FaPhone />
+                      </span>
+                    </div>
+                  </div>,
+                  "phoneNumber"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Detailed - Address"
+                    value={detailedAddress}
+                    onChange={(e) => setDetailedAddress(e.target.value)}
+                    placeholder="Detailed Address"
+                    disabled={!validationData || !detailedAddress}
+                  />,
+                  "detailedAddress"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Fax"
+                    value={fax}
+                    onChange={(e) => setFax(e.target.value)}
+                    placeholder="Fax"
+                    disabled={!validationData || !fax}
+                  />,
+                  "fax"
+                )}
+
+                {renderField(
+                  <ApplicantForm
+                    label="Password"
+                    type="password"
+                    icon={<FaLock />}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create password"
+                    disabled={!validationData}
+                  />,
+                  "password"
+                )}
+
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="text-md font-semibold text-gray-700 mb-3">
+                    Location Information
+                  </h3>
+                  {renderLocationFields()}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !validationData}
+                    className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-full transition duration-200"
+                  >
+                    {loading ? "Registering..." : "Register"}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
+                    {error}
+                  </p>
+                )}
+              </form>
             )}
-          </form>
+
+            {/* Company Form */}
+            {accountType === "COMPANY" && (
+              <form onSubmit={handleCompanySubmit} className="space-y-4">
+                <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                  <p className="text-sm text-blue-800 text-center font-medium">
+                    Company Registration
+                  </p>
+                </div>
+
+                {/* Company Information */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                  <h3 className="text-md font-semibold text-gray-700 flex items-center gap-2">
+                    <MdBusiness className="text-blue-600" />
+                    Company Information
+                  </h3>
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Category"
+                      disabled={!validationData || !category}
+                    />,
+                    "category"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Business-Name"
+                      icon={<FaBuilding />}
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Enter company name"
+                      disabled={!validationData || !companyName}
+                    />,
+                    "companyName"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="TaxPayer - Tin"
+                      value={companyTin}
+                      onChange={(e) => setCompanyTin(e.target.value)}
+                      placeholder="Enter 9-digit company TIN"
+                      disabled={!validationData || !companyTin}
+                    />,
+                    "companyTin"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Email - Address"
+                      type="email"
+                      icon={<FaEnvelope />}
+                      value={companyEmail}
+                      onChange={(e) => setCompanyEmail(e.target.value)}
+                      placeholder="Enter company email"
+                      disabled={!validationData || !companyEmail}
+                    />,
+                    "companyEmail"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Detailed - Address"
+                      value={detailedAddress}
+                      onChange={(e) => setDetailedAddress(e.target.value)}
+                      placeholder="Detailed Address"
+                      disabled={!validationData || !detailedAddress}
+                    />,
+                    "detailedAddress"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Fax"
+                      value={fax}
+                      onChange={(e) => setFax(e.target.value)}
+                      placeholder="Fax"
+                      disabled={!validationData || !fax}
+                    />,
+                    "fax"
+                  )}
+
+                  {renderField(
+                    <ApplicantForm
+                      label="Password"
+                      type="password"
+                      icon={<FaLock />}
+                      value={companyPassword}
+                      onChange={(e) => setCompanyPassword(e.target.value)}
+                      placeholder="Create password"
+                      disabled={!validationData}
+                    />,
+                    "companyPassword"
+                  )}
+
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                      Company Location
+                    </h4>
+                    {renderLocationFields()}
+                  </div>
+                </div>
+
+                {/* Info about adding members later */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> You can add company members from your
+                    dashboard after registration.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !validationData}
+                    className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-full transition duration-200"
+                  >
+                    {loading ? "Registering..." : "Register Company"}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
+                    {error}
+                  </p>
+                )}
+              </form>
+            )}
+          </div>
         )}
       </div>
     </div>
