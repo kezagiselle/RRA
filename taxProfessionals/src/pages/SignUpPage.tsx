@@ -20,6 +20,7 @@ import { getVillage } from "../services/Villages";
 import { addApplicant } from "../services/SignUp";
 import { addCompany } from "../services/CompanyRegister";
 import { determineSignupType } from "../services/SignupType";
+import { validateTin } from "../services/TinValidation";
 
 const SignUpPage: React.FC = () => {
   console.log("SignUpPage: Component rendering");
@@ -60,6 +61,22 @@ const SignUpPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<any>({});
+
+  // Validation state
+  const [validationTin, setValidationTin] = useState("");
+  const [validationData, setValidationData] = useState<any>(null);
+  const [category, setCategory] = useState("");
+  const [detailedAddress, setDetailedAddress] = useState("");
+  const [fax, setFax] = useState("");
+  const [businessName, setBusinessName] = useState("");
+
+  // Validation state
+  const [validationTin, setValidationTin] = useState("");
+  const [validationData, setValidationData] = useState<any>(null);
+  const [category, setCategory] = useState("");
+  const [detailedAddress, setDetailedAddress] = useState("");
+  const [fax, setFax] = useState("");
+  const [businessName, setBusinessName] = useState("");
 
   const navigate = useNavigate();
 
@@ -415,6 +432,57 @@ const SignUpPage: React.FC = () => {
     return formErrors;
   };
 
+
+
+  const handleValidateTin = async () => {
+    if (!validationTin) {
+      setError("Please enter a TIN to validate");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await validateTin(validationTin);
+      console.log("SignUpPage: TIN validation response:", response.data);
+      const data = response.data;
+
+      setValidationData(data);
+
+      // Map API response to form fields
+      setCategory(data.category || "");
+      setDetailedAddress(data.detailedAddress || "");
+      setFax(data.fax || "");
+      setBusinessName(data.businessName || "");
+
+      // Populate existing fields if data is present
+      if (data.tin) {
+        setTin(data.tin);
+        setCompanyTin(data.tin);
+      }
+
+      if (data.nid) setNid(data.nid);
+
+      if (data.applicantNames) setFullname(data.applicantNames);
+      if (data.businessName) setCompanyName(data.businessName);
+
+      if (data.emailAddress) {
+        setEmail(data.emailAddress);
+        setCompanyEmail(data.emailAddress);
+      }
+
+      if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error("SignUpPage: TIN validation error:", err);
+      setLoading(false);
+      setError("Failed to validate TIN. Please check the number and try again.");
+      setValidationData(null);
+    }
+  };
+
   const handleIndividualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -719,26 +787,23 @@ const SignUpPage: React.FC = () => {
                   onClick={() => setAccountType("INDIVIDUAL")}
                   className={`
                     flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all duration-200
-                    ${
-                      accountType === "INDIVIDUAL"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 bg-white hover:border-gray-400"
+                    ${accountType === "INDIVIDUAL"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 bg-white hover:border-gray-400"
                     }
                   `}
                 >
                   <FaUser
-                    className={`text-4xl mb-3 ${
-                      accountType === "INDIVIDUAL"
-                        ? "text-blue-500"
-                        : "text-gray-400"
-                    }`}
+                    className={`text-4xl mb-3 ${accountType === "INDIVIDUAL"
+                      ? "text-blue-500"
+                      : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`font-semibold ${
-                      accountType === "INDIVIDUAL"
-                        ? "text-blue-700"
-                        : "text-gray-700"
-                    }`}
+                    className={`font-semibold ${accountType === "INDIVIDUAL"
+                      ? "text-blue-700"
+                      : "text-gray-700"
+                      }`}
                   >
                     Individual
                   </span>
@@ -753,26 +818,23 @@ const SignUpPage: React.FC = () => {
                   onClick={() => setAccountType("COMPANY")}
                   className={`
                     flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all duration-200
-                    ${
-                      accountType === "COMPANY"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 bg-white hover:border-gray-400"
+                    ${accountType === "COMPANY"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 bg-white hover:border-gray-400"
                     }
                   `}
                 >
                   <FaBuilding
-                    className={`text-4xl mb-3 ${
-                      accountType === "COMPANY"
-                        ? "text-blue-500"
-                        : "text-gray-400"
-                    }`}
+                    className={`text-4xl mb-3 ${accountType === "COMPANY"
+                      ? "text-blue-500"
+                      : "text-gray-400"
+                      }`}
                   />
                   <span
-                    className={`font-semibold ${
-                      accountType === "COMPANY"
-                        ? "text-blue-700"
-                        : "text-gray-700"
-                    }`}
+                    className={`font-semibold ${accountType === "COMPANY"
+                      ? "text-blue-700"
+                      : "text-gray-700"
+                      }`}
                   >
                     Company
                   </span>
