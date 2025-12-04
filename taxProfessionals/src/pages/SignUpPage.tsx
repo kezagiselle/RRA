@@ -415,7 +415,7 @@ const SignUpPage: React.FC = () => {
                 className={`w-full sm:w-auto font-semibold py-4 px-6 rounded-lg transition duration-200 mb-0 ${
                   isTinValidated
                     ? "bg-green-100 text-green-700 cursor-default"
-                    : "bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
+                    : "bg-green-600 hover:bg-green-700 text-white"
                 }`}
               >
                 {validating ? "Validating..." : isTinValidated ? "Validated" : "Validate"}
