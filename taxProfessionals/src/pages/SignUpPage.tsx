@@ -374,45 +374,32 @@ const SignUpPage: React.FC = () => {
               "tin"
             )}
 
-            {/* Names/Company Name Field */}
-            {accountType === "INDIVIDUAL" ? (
-              renderField(
-                <ApplicantForm
-                  label="Names"
-                  icon={<FaUser />}
-                  value={fullname}
-                  onChange={(e) => setFullname(e.target.value)}
-                  placeholder="Full Names"
-                  disabled={false}
-                />,
-                "fullname"
-              )
-            ) : (
-              <>
-                {renderField(
-                  <ApplicantForm
-                    label="Company Name"
-                    icon={<MdBusiness />}
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Company Name"
-                    disabled={false}
-                  />,
-                  "businessName"
-                )}
-                {renderField(
-                  <ApplicantForm
-                    label="Applicant Names (Person Registering)"
-                    icon={<FaUser />}
-                    value={fullname}
-                    onChange={(e) => setFullname(e.target.value)}
-                    placeholder="Your Full Names"
-                    disabled={false}
-                  />,
-                  "fullname"
-                )}
-              </>
-            )}
+             {/* Names/Company Name Field */}
+             {accountType === "INDIVIDUAL" ? (
+               renderField(
+                 <ApplicantForm
+                   label="Names"
+                   icon={<FaUser />}
+                   value={fullname}
+                   onChange={(e) => setFullname(e.target.value)}
+                   placeholder="Full Names"
+                   disabled={false}
+                 />,
+                 "fullname"
+               )
+             ) : (
+               renderField(
+                 <ApplicantForm
+                   label="Company Name"
+                   icon={<MdBusiness />}
+                   value={businessName}
+                   onChange={(e) => setBusinessName(e.target.value)}
+                   placeholder="Company Name"
+                   disabled={false}
+                 />,
+                 "businessName"
+               )
+             )}
 
             {/* Email Field */}
             {renderField(
