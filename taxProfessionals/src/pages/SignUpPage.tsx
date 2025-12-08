@@ -37,13 +37,6 @@ const SignUpPage: React.FC = () => {
   const [cell, setCell] = useState("");
   const [village, setVillage] = useState("");
 
-  // Location IDs (for company registration)
-  const [provinceId, setProvinceId] = useState<number | null>(null);
-  const [districtId, setDistrictId] = useState<number | null>(null);
-  const [sectorId, setSectorId] = useState<number | null>(null);
-  const [cellId, setCellId] = useState<number | null>(null);
-  const [villageId, setVillageId] = useState<number | null>(null);
-
   // Additional fields
   const [category, setCategory] = useState("");
   const [detailedAddress, setDetailedAddress] = useState("");
@@ -51,7 +44,6 @@ const SignUpPage: React.FC = () => {
   const [businessName, setBusinessName] = useState("");
 
   // UI state
-  const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
@@ -83,11 +75,6 @@ const SignUpPage: React.FC = () => {
     setSector("");
     setCell("");
     setVillage("");
-    setProvinceId(null);
-    setDistrictId(null);
-    setSectorId(null);
-    setCellId(null);
-    setVillageId(null);
     setCategory("");
     setDetailedAddress("");
     setFax("");
@@ -113,37 +100,37 @@ const SignUpPage: React.FC = () => {
     try {
       const response = await validateTin(validationTin);
       console.log("SignUpPage: TIN validation response:", response.data);
-      const data = response.data;
-
-      setValidationData(data);
       
-      // Auto-fill form fields with validated data
-      setCategory(data.category || "");
-      setCell(data.cell || "");
-      setCellId(data.cellId ? parseInt(data.cellId) : null);
-      setDetailedAddress(data.detailedAddress || "");
-      setDistrict(data.district || "");
-      setDistrictId(data.districtId ? parseInt(data.districtId) : null);
-      setEmail(data.emailAddress || data.email || "");
-      setFullname(data.applicantNames || data.name || "");
-      setPhoneNumber(data.phoneNumber || "");
-      setProvince(data.province || "");
-      setProvinceId(data.provinceId ? parseInt(data.provinceId) : null);
-      setSector(data.sector || "");
-      setSectorId(data.sectorId ? parseInt(data.sectorId) : null);
-      setVillage(data.village || "");
-      setVillageId(data.villageId ? parseInt(data.villageId) : null);
-      setFax(data.fax || "");
-      setNid(data.nid || "");
-      setBusinessName(data.businessName || "");
-      setTin(data.tin || "");
+      // The response structure is: { success, message, data: {...}, timestamp }
+      const apiResponse = response.data;
+      const supplierData = apiResponse.data; // The actual supplier data
+      
+      console.log("SignUpPage: TIN validation data:", supplierData);
+
+      setValidationData(apiResponse);
+      
+      // Auto-fill form fields with validated data (matching API field names)
+      // Common fields for both Individual and Company
+      setTin(supplierData.SupplierTin || validationTin);
+      setFullname(supplierData.SupplierName || ""); // For Individual: names, For Company: we'll use businessName
+      setBusinessName(supplierData.SupplierName || ""); // Company name
+      setEmail(supplierData.EmailAddress || "");
+      setPhoneNumber(supplierData.PhoneNumber || "");
+      setNid(supplierData.NationalId || "");
+      
+      // Location fields
+      setProvince(supplierData.Province || "");
+      setDistrict(supplierData.District || "");
+      setSector(supplierData.Sector || "");
+      setCell(supplierData.Cell || "");
+      setVillage(supplierData.Village || "");
 
       setIsTinValidated(true);
       setValidating(false);
       setError("");
       
       // Set the validated TIN
-      setValidationTin(data.tin || validationTin);
+      setValidationTin(supplierData.SupplierTin || validationTin);
       
     } catch (err: any) {
       console.error("SignUpPage: TIN validation error:", err);
@@ -154,55 +141,10 @@ const SignUpPage: React.FC = () => {
     }
   };
 
-  const validateForm = () => {
-    const newErrors: any = {};
-
-    if (!category) newErrors.category = "Category is required";
-    if (!cell) newErrors.cell = "Cell is required";
-    if (!district) newErrors.district = "District is required";
-    if (!email) newErrors.email = "Email is required";
-    if (!fullname) newErrors.fullname = "Full name is required";
-    if (!phoneNumber) newErrors.phoneNumber = "Phone number is required";
-    if (!province) newErrors.province = "Province is required";
-    if (!sector) newErrors.sector = "Sector is required";
-    if (!village) newErrors.village = "Village is required";
-    if (!nid) newErrors.nid = "National ID is required";
-    if (!businessName) newErrors.businessName = "Business name is required";
-    if (!tin) newErrors.tin = "TIN is required";
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    // For company registration, validate location IDs
-    if (accountType === "COMPANY") {
-      if (!provinceId) newErrors.provinceId = "Province ID is required";
-      if (!districtId) newErrors.districtId = "District ID is required";
-      if (!sectorId) newErrors.sectorId = "Sector ID is required";
-      if (!cellId) newErrors.cellId = "Cell ID is required";
-      if (!villageId) newErrors.villageId = "Village ID is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if TIN is validated
-    if (!isTinValidated) {
-      setError("Please validate your TIN first before registering");
-      return;
-    }
-
-    // Validate form
-    if (!validateForm()) {
-      setError("Please fill in all required fields");
-      return;
-    }
-
+    // No validation - proceed directly to registration
     setRegistering(true);
     setError("");
 
@@ -216,7 +158,7 @@ const SignUpPage: React.FC = () => {
         detailedAddress,
         district,
         email,
-        fullname,
+        fullName: fullname,  // Backend expects camelCase
         phoneNumber,
         province,
         sector,
@@ -234,27 +176,21 @@ const SignUpPage: React.FC = () => {
       if (accountType === "INDIVIDUAL") {
         response = await addApplicant(userData);
       } else {
-        if (!provinceId || !districtId || !sectorId || !cellId || !villageId) {
-          setError("Location IDs are missing. Please validate TIN again.");
-          setRegistering(false);
-          return;
-        }
-
+        // Company registration - send location names (not IDs)
         const companyData = {
           companyTin: tin,
           companyName: businessName,
           companyEmail: email,
-          provinceId: provinceId, 
-          districtId: districtId, 
-          sectorId: sectorId, 
-          cellId: cellId, 
-          villageId: villageId, 
+          province: province,
+          district: district,
+          sector: sector,
+          cell: cell,
+          village: village,
           companyAddress: detailedAddress,
           companyPhoneNumber: phoneNumber,
           companyFax: fax,
           category,
           password,
-          nid,
           applicantNames: fullname,
           accountType
         };
@@ -266,8 +202,8 @@ const SignUpPage: React.FC = () => {
       console.log("SignUpPage: Registration successful:", response.data);
       
       // Success
-      alert("Registration successful!");
-      navigate("/login");
+      alert("Registration successful! Please login with your credentials.");
+      navigate("/");
       
     } catch (err: any) {
       console.error("SignUpPage: Registration error:", err);
@@ -426,98 +362,105 @@ const SignUpPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* TIN Field */}
             {renderField(
               <ApplicantForm
-                label="Category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Category"
-                disabled={true} 
+                label={accountType === "COMPANY" ? "Company TIN" : "TIN"}
+                value={tin}
+                onChange={(e) => setTin(e.target.value)}
+                placeholder={accountType === "COMPANY" ? "Company TIN" : "TIN"}
+                disabled={false}
               />,
-              "category"
+              "tin"
             )}
 
-            {renderField(
-              <ApplicantForm
-                label="Cell"
-                value={cell}
-                onChange={(e) => setCell(e.target.value)}
-                placeholder="Cell"
-                disabled={true} 
-              />,
-              "cell"
+            {/* Names/Company Name Field */}
+            {accountType === "INDIVIDUAL" ? (
+              renderField(
+                <ApplicantForm
+                  label="Names"
+                  icon={<FaUser />}
+                  value={fullname}
+                  onChange={(e) => setFullname(e.target.value)}
+                  placeholder="Full Names"
+                  disabled={false}
+                />,
+                "fullname"
+              )
+            ) : (
+              <>
+                {renderField(
+                  <ApplicantForm
+                    label="Company Name"
+                    icon={<MdBusiness />}
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Company Name"
+                    disabled={false}
+                  />,
+                  "businessName"
+                )}
+                {renderField(
+                  <ApplicantForm
+                    label="Applicant Names (Person Registering)"
+                    icon={<FaUser />}
+                    value={fullname}
+                    onChange={(e) => setFullname(e.target.value)}
+                    placeholder="Your Full Names"
+                    disabled={false}
+                  />,
+                  "fullname"
+                )}
+              </>
             )}
 
+            {/* Email Field */}
             {renderField(
               <ApplicantForm
-                label="Detailed Address"
-                value={detailedAddress}
-                onChange={(e) => setDetailedAddress(e.target.value)}
-                placeholder="Detailed Address"
-                disabled={true} 
-              />,
-              "detailedAddress"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="District"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                placeholder="District"
-                disabled={true} 
-              />,
-              "district"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="Email Address"
+                label={accountType === "COMPANY" ? "Company Email" : "Email Address"}
                 type="email"
                 icon={<FaEnvelope />}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email Address"
-                disabled={true} 
+                disabled={false}
               />,
               "email"
             )}
 
-            {renderField(
+            {/* National ID - Only for Individual */}
+            {accountType === "INDIVIDUAL" && renderField(
               <ApplicantForm
-                label="Applicant Names"
-                icon={<FaUser />}
-                value={fullname}
-                onChange={(e) => setFullname(e.target.value)}
-                placeholder="Applicant Names"
-                disabled={true} 
+                label="National ID"
+                value={nid}
+                onChange={(e) => setNid(e.target.value)}
+                placeholder="National ID"
+                disabled={false}
               />,
-              "fullname"
+              "nid"
             )}
 
+            {/* Phone Number Field */}
             {renderField(
               <div className="flex flex-col">
                 <label className="text-gray-700 font-medium mb-2">
-                  Phone Number
+                  {accountType === "COMPANY" ? "Company Phone Number" : "Phone Number"}
                 </label>
                 <div className="relative">
-                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
-                    +250
-                  </div>
                   <input
                     type="text"
-                    value={
-                      phoneNumber.startsWith("+250") ? phoneNumber.slice(4) : phoneNumber
-                    }
+                    value={phoneNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "");
-                      if (value.length <= 9) {
-                        setPhoneNumber("+250" + value);
+                      let value = e.target.value;
+                      // Ensure phone number starts with +
+                      if (!value.startsWith("+")) {
+                        value = "+" + value;
                       }
+                      setPhoneNumber(value);
                     }}
-                    placeholder="XXXXXXXXX"
-                    disabled={true} 
-                    className="w-full bg-gray-100 border border-gray-300 rounded-lg py-4 pl-16 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none cursor-not-allowed"
+                    placeholder="+250788123456"
+                    disabled={false}
+                    className="w-full bg-white border border-gray-300 rounded-lg py-4 pl-5 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
                     <FaPhone />
@@ -527,15 +470,27 @@ const SignUpPage: React.FC = () => {
               "phoneNumber"
             )}
 
+            {/* Location Fields */}
             {renderField(
               <ApplicantForm
                 label="Province"
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
                 placeholder="Province"
-                disabled={true} 
+                disabled={false}
               />,
               "province"
+            )}
+
+            {renderField(
+              <ApplicantForm
+                label="District"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                placeholder="District"
+                disabled={false}
+              />,
+              "district"
             )}
 
             {renderField(
@@ -544,9 +499,20 @@ const SignUpPage: React.FC = () => {
                 value={sector}
                 onChange={(e) => setSector(e.target.value)}
                 placeholder="Sector"
-                disabled={true} 
+                disabled={false}
               />,
               "sector"
+            )}
+
+            {renderField(
+              <ApplicantForm
+                label="Cell"
+                value={cell}
+                onChange={(e) => setCell(e.target.value)}
+                placeholder="Cell"
+                disabled={false}
+              />,
+              "cell"
             )}
 
             {renderField(
@@ -555,56 +521,12 @@ const SignUpPage: React.FC = () => {
                 value={village}
                 onChange={(e) => setVillage(e.target.value)}
                 placeholder="Village"
-                disabled={true} 
+                disabled={false}
               />,
               "village"
             )}
 
-            {renderField(
-              <ApplicantForm
-                label="Fax"
-                value={fax}
-                onChange={(e) => setFax(e.target.value)}
-                placeholder="Fax"
-                disabled={true} 
-              />,
-              "fax"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="National ID"
-                value={nid}
-                onChange={(e) => setNid(e.target.value)}
-                placeholder="National ID"
-                disabled={true} 
-              />,
-              "nid"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="Business Name"
-                icon={<MdBusiness />}
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="Business Name"
-                disabled={true} 
-              />,
-              "businessName"
-            )}
-
-            {renderField(
-              <ApplicantForm
-                label="TaxPayer TIN"
-                value={tin}
-                onChange={(e) => setTin(e.target.value)}
-                placeholder="TaxPayer TIN"
-                disabled={true} 
-              />,
-              "tin"
-            )}
-
+            {/* Password Field */}
             {renderField(
               <ApplicantForm
                 label="Password"
@@ -613,25 +535,11 @@ const SignUpPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create password"
-                disabled={false} 
+                disabled={false}
               />,
               "password"
             )}
           </div>
-
-          {/* Location IDs for Company (Debug Info) */}
-          {accountType === "COMPANY" && isTinValidated && (
-            <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs">
-              <p className="text-yellow-800 font-medium">Location IDs (for Company registration):</p>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-2">
-                <div>Province ID: {provinceId || "Missing"}</div>
-                <div>District ID: {districtId || "Missing"}</div>
-                <div>Sector ID: {sectorId || "Missing"}</div>
-                <div>Cell ID: {cellId || "Missing"}</div>
-                <div>Village ID: {villageId || "Missing"}</div>
-              </div>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-4">
             <button
@@ -643,7 +551,7 @@ const SignUpPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={registering || !isTinValidated || !accountType}
+              disabled={registering}
               className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-full transition duration-200"
             >
               {registering ? "Registering..." : "Register"}
@@ -660,7 +568,7 @@ const SignUpPage: React.FC = () => {
             <p className="text-gray-600 text-sm sm:text-base">
               Already have an account?{" "}
               <a
-                href="/login"
+                href="/"
                 onClick={(e) => {
                   e.preventDefault();
                   navigate("/");

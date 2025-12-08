@@ -29,11 +29,22 @@ export interface CompanyRegistrationData {
   companyEmail: string;
   password: string;
   numberOfApplicants?: number;
-  provinceId: number;
-  districtId: number;
-  sectorId: number;
-  cellId: number;
-  villageId: number;
+  
+  // Location names (from TIN validation)
+  province?: string;
+  district?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
+  
+  // Optional fields
+  companyAddress?: string;
+  companyPhoneNumber?: string;
+  companyFax?: string;
+  category?: string;
+  applicantNames?: string;
+  accountType?: string;
+  
   applicants?: Array<{
     nid: string;
     fullName: string;

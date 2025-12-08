@@ -13,3 +13,13 @@ export const addApplicant = (data: any) => {
     },
   });
 };
+
+export const fetchApplicants = () => {
+  console.log("SignUp Service: Fetching all applicants");
+
+  return axios.get(REST_API_BASE_URL, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+};
