@@ -5,6 +5,7 @@ import {
   FaEnvelope,
   FaPhone,
   FaBuilding,
+  FaCheckCircle,
 } from "react-icons/fa";
 import { RiArrowDropDownLine } from "react-icons/ri";
 import { MdBusiness } from "react-icons/md";
@@ -20,6 +21,7 @@ import { getVillage } from "../services/Villages";
 import { addApplicant } from "../services/SignUp";
 import { addCompany } from "../services/CompanyRegister";
 import { determineSignupType } from "../services/SignupType";
+import { validateTin } from "../services/ValidateTin";
 
 const SignUpPage: React.FC = () => {
   console.log("SignUpPage: Component rendering");
@@ -58,6 +60,8 @@ const SignUpPage: React.FC = () => {
 
   // UI state
   const [loading, setLoading] = useState(false);
+  const [validatingTin, setValidatingTin] = useState(false);
+  const [validatingCompanyTin, setValidatingCompanyTin] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<any>({});
 
@@ -266,6 +270,99 @@ const SignUpPage: React.FC = () => {
         setVillagedata([]);
       });
   }, [cell, celldata]);
+
+  const handleValidateIndividualTin = () => {
+    if (!tin.trim()) {
+      setErrors({ ...errors, tin: "Please enter TIN before validating" });
+      return;
+    }
+
+    if (!/^[0-9]{9}$/.test(tin.trim())) {
+      setErrors({ ...errors, tin: "TIN must be 9 digits" });
+      return;
+    }
+
+    setValidatingTin(true);
+    setError("");
+    const currentErrors = { ...errors };
+    delete currentErrors.tin;
+    setErrors(currentErrors);
+
+    console.log("SignUpPage: Validating individual TIN:", tin);
+
+    validateTin(tin.trim())
+      .then((response) => {
+        console.log("SignUpPage: TIN validation successful:", response.data);
+        setValidatingTin(false);
+
+        const data = response.data;
+        
+        // Auto-fill form fields with validated data
+        if (data.name) setFullname(data.name);
+        if (data.email) setEmail(data.email);
+        if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
+        
+        alert("TIN validated successfully! Form fields have been auto-filled.");
+      })
+      .catch((error) => {
+        console.error("SignUpPage: TIN validation error:", error);
+        setValidatingTin(false);
+        
+        if (error.response?.data?.message) {
+          setErrors({ ...errors, tin: error.response.data.message });
+        } else if (error.message) {
+          setErrors({ ...errors, tin: "Failed to validate TIN: " + error.message });
+        } else {
+          setErrors({ ...errors, tin: "TIN validation failed. Please check the TIN number." });
+        }
+      });
+  };
+
+  const handleValidateCompanyTin = () => {
+    if (!companyTin.trim()) {
+      setErrors({ ...errors, companyTin: "Please enter Company TIN before validating" });
+      return;
+    }
+
+    if (!/^[0-9]{9}$/.test(companyTin.trim())) {
+      setErrors({ ...errors, companyTin: "Company TIN must be 9 digits" });
+      return;
+    }
+
+    setValidatingCompanyTin(true);
+    setError("");
+    const currentErrors = { ...errors };
+    delete currentErrors.companyTin;
+    setErrors(currentErrors);
+
+    console.log("SignUpPage: Validating company TIN:", companyTin);
+
+    validateTin(companyTin.trim())
+      .then((response) => {
+        console.log("SignUpPage: Company TIN validation successful:", response.data);
+        setValidatingCompanyTin(false);
+
+        const data = response.data;
+        
+        // Auto-fill form fields with validated data
+        if (data.name) setCompanyName(data.name);
+        if (data.email) setCompanyEmail(data.email);
+        
+        alert("Company TIN validated successfully! Form fields have been auto-filled.");
+      })
+      .catch((error) => {
+        console.error("SignUpPage: Company TIN validation error:", error);
+        setValidatingCompanyTin(false);
+        
+        if (error.response?.data?.message) {
+          setErrors({ ...errors, companyTin: error.response.data.message });
+        } else if (error.message) {
+          setErrors({ ...errors, companyTin: "Failed to validate TIN: " + error.message });
+        } else {
+          setErrors({ ...errors, companyTin: "TIN validation failed. Please check the TIN number." });
+        }
+      });
+  };
 
   const handleAccountTypeNext = () => {
     setError("");
@@ -828,12 +925,27 @@ const SignUpPage: React.FC = () => {
             </div>
 
             {renderField(
-              <ApplicantForm
-                label="TIN"
-                value={tin}
-                onChange={(e) => setTin(e.target.value)}
-                placeholder="Enter 9-digit TIN"
-              />,
+              <div className="flex flex-col">
+                <label className="text-gray-700 font-medium mb-2">TIN</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={tin}
+                    onChange={(e) => setTin(e.target.value)}
+                    placeholder="Enter 9-digit TIN"
+                    className="flex-1 bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleValidateIndividualTin}
+                    disabled={validatingTin || !tin.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold px-6 rounded-lg transition duration-200 whitespace-nowrap flex items-center gap-2"
+                  >
+                    <FaCheckCircle />
+                    {validatingTin ? "Validating..." : "Validate"}
+                  </button>
+                </div>
+              </div>,
               "tin"
             )}
 
@@ -973,12 +1085,27 @@ const SignUpPage: React.FC = () => {
               )}
 
               {renderField(
-                <ApplicantForm
-                  label="Company TIN"
-                  value={companyTin}
-                  onChange={(e) => setCompanyTin(e.target.value)}
-                  placeholder="Enter 9-digit company TIN"
-                />,
+                <div className="flex flex-col">
+                  <label className="text-gray-700 font-medium mb-2">Company TIN</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={companyTin}
+                      onChange={(e) => setCompanyTin(e.target.value)}
+                      placeholder="Enter 9-digit company TIN"
+                      className="flex-1 bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleValidateCompanyTin}
+                      disabled={validatingCompanyTin || !companyTin.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold px-6 rounded-lg transition duration-200 whitespace-nowrap flex items-center gap-2"
+                    >
+                      <FaCheckCircle />
+                      {validatingCompanyTin ? "Validating..." : "Validate"}
+                    </button>
+                  </div>
+                </div>,
                 "companyTin"
               )}
 
