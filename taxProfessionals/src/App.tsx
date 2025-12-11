@@ -9,6 +9,7 @@ import SignUpPage from "./pages/SignUpPage";
 import DocumentPage from "./pages/DocumentPage";
 import ProfilePage from "./pages/ProfilePage";
 import AddMemberPage from "./pages/AddMemberPage";
+import EditMemberPage from "./pages/EditMemberPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -28,6 +29,7 @@ function App() {
         <Route path="/dashboard" element={<ApplicantDashboard />} />
         <Route path="/company-dashboard" element={<CompanyDashboard />} />
         <Route path="/add-member" element={<AddMemberPage />} />
+        <Route path="/edit-member" element={<EditMemberPage />} />
         <Route path="/documents" element={<DocumentPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Routes>

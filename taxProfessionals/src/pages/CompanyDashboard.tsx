@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
   LogOut,
@@ -18,7 +18,6 @@ import {
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
 import { getCompanyMembers } from "../services/getCompanyMembers";
-import { updateCompanyMember } from "../services/updateCompanyMember";
 import { deleteCompanyMember } from "../services/deleteCompanyMember";
 import type { CompanyAccount, CompanyMember } from "../types/company";
 import { AccountType } from "../types/company";
@@ -55,8 +54,18 @@ export default function CompanyDashboard() {
     useState<CompanyMember | null>(null);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Log whenever members state changes
+  useEffect(() => {
+    console.log("CompanyDashboard: Members state updated, count:", members.length);
+    console.log("CompanyDashboard: Current members:", members);
+  }, [members]);
 
   useEffect(() => {
+    console.log("CompanyDashboard: useEffect triggered");
+    console.log("CompanyDashboard: location.state:", location.state);
+    
     const fetchCompanyData = async () => {
       try {
         const token = localStorage.getItem("authToken");
@@ -65,10 +74,12 @@ export default function CompanyDashboard() {
           return;
         }
 
+        console.log("CompanyDashboard: Fetching company data...");
         setLoading(true);
         setError(null);
 
         const response = await getCurrentUser();
+        console.log("CompanyDashboard: getCurrentUser response:", response.data);
         const userData = response.data.data;
 
         // Check if this is a company account by checking for tinCompany field
@@ -87,31 +98,46 @@ export default function CompanyDashboard() {
           members: userData.members || [],
         };
 
+        console.log("CompanyDashboard: Company data created:", companyData);
         setCompanyAccount(companyData);
 
         // Use members from response if available
         if (companyData.members && companyData.members.length > 0) {
+          console.log("CompanyDashboard: Setting members from response:", companyData.members);
           setMembers(companyData.members);
+        } else {
+          console.log("CompanyDashboard: No members in response, members array:", companyData.members);
         }
 
-        // Try to fetch company members from API (only if companyId is available and > 0)
-        if (companyData.companyId && companyData.companyId > 0) {
+        // Try to fetch company members from API (use company TIN, not UUID)
+        if (companyData.companyTin) {
+          console.log("CompanyDashboard: Fetching members for company TIN:", companyData.companyTin);
           try {
             const membersResponse = await getCompanyMembers(
-              companyData.companyId
+              companyData.companyTin
             );
+            console.log("CompanyDashboard: getCompanyMembers response:", membersResponse.data);
+            
             if (
               membersResponse.data.data &&
               membersResponse.data.data.length > 0
             ) {
+              console.log("CompanyDashboard: Setting members from getCompanyMembers:", membersResponse.data.data);
               setMembers(membersResponse.data.data);
+            } else {
+              console.log("CompanyDashboard: No members data from getCompanyMembers");
             }
           } catch (err: any) {
+            console.error("CompanyDashboard: Error fetching members:", err);
+            console.error("CompanyDashboard: Error status:", err.response?.status);
+            console.error("CompanyDashboard: Error data:", err.response?.data);
             // Endpoint might not exist yet (401/404) - this is expected
             if (err.response?.status !== 401 && err.response?.status !== 404) {
-              console.error("CompanyDashboard: Error fetching members:", err);
+              console.error("CompanyDashboard: Unexpected error fetching members:", err);
             }
           }
+        } else {
+          console.log("CompanyDashboard: No company TIN available, companyTin:", companyData.companyTin);
         }
       } catch (err: any) {
         console.error("CompanyDashboard: Error fetching company data:", err);
@@ -133,7 +159,7 @@ export default function CompanyDashboard() {
     };
 
     fetchCompanyData();
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ show: true, message, type });
@@ -156,41 +182,21 @@ export default function CompanyDashboard() {
     navigate("/documents");
   };
 
-  const handleEditMember = async (member: CompanyMember) => {
-    const newFullName = prompt("Enter new full name:", member.fullName);
-    if (newFullName === null) return; // User cancelled
-
-    const newEmail = prompt("Enter new email:", member.email);
-    if (newEmail === null) return; // User cancelled
-
-    const newPhone = prompt("Enter new phone number:", member.phoneNumber);
-    if (newPhone === null) return; // User cancelled
-
-    const newNid = prompt("Enter new NID/Passport:", member.nid);
-    if (newNid === null) return; // User cancelled
-
-    try {
-      await updateCompanyMember({
-        memberId: member.memberId,
-        fullName: newFullName,
-        email: newEmail,
-        phoneNumber: newPhone,
-        nid: newNid,
-      });
-
-      // Refresh members list
-      if (companyAccount) {
-        const membersResponse = await getCompanyMembers(companyAccount.companyId);
-        if (membersResponse.data.data) {
-          setMembers(membersResponse.data.data);
+  const handleEditMember = (member: CompanyMember) => {
+    // Navigate to edit page with member data
+    navigate("/edit-member", { 
+      state: { 
+        member: {
+          id: member.memberId,
+          fullName: member.fullName,
+          email: member.email,
+          phoneNumber: member.phoneNumber,
+          nid: member.nid,
+          tpin: member.tpin,
+          status: member.status,
         }
-      }
-
-      showToast("Member updated successfully!", "success");
-    } catch (err: any) {
-      console.error("Error updating member:", err);
-      showToast(err.response?.data?.message || "Failed to update member", "error");
-    }
+      } 
+    });
   };
 
   const handleDeleteMember = async (member: CompanyMember) => {
@@ -199,14 +205,39 @@ export default function CompanyDashboard() {
     }
 
     try {
-      await deleteCompanyMember(member.memberId);
-
-      // Refresh members list
-      setMembers(members.filter(m => m.memberId !== member.memberId));
+      console.log("CompanyDashboard: Deleting member with TPIN:", member.tpin);
+      const response = await deleteCompanyMember(member.tpin);
+      
+      console.log("CompanyDashboard: Delete response:", response);
+      console.log("CompanyDashboard: Delete response data:", response.data);
+      
+      // Check if the backend actually succeeded
+      if (response.data && response.data.success === false) {
+        console.error("CompanyDashboard: Backend returned success=false:", response.data.message);
+        showToast(response.data.message || "Failed to delete member", "error");
+        return;
+      }
 
       showToast("Member deleted successfully!", "success");
+      
+      // Refresh the entire company data from backend to get updated member list
+      console.log("CompanyDashboard: Refreshing company data after delete...");
+      try {
+        const refreshResponse = await getCurrentUser();
+        const userData = refreshResponse.data.data;
+        
+        if (userData.members && userData.members.length >= 0) {
+          console.log("CompanyDashboard: Updated members after delete:", userData.members);
+          setMembers(userData.members);
+        }
+      } catch (refreshErr) {
+        console.error("CompanyDashboard: Error refreshing data:", refreshErr);
+        // Fallback to local filter if refresh fails
+        setMembers(members.filter(m => m.tpin !== member.tpin));
+      }
     } catch (err: any) {
-      console.error("Error deleting member:", err);
+      console.error("CompanyDashboard: Error deleting member:", err);
+      console.error("CompanyDashboard: Error response:", err.response?.data);
       showToast(err.response?.data?.message || "Failed to delete member", "error");
     }
   };

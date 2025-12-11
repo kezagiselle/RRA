@@ -16,7 +16,7 @@ export interface CompanyMember {
 }
 
 export interface CompanyAccount {
-  companyId: number;
+  companyId: number | string;  // Can be number or UUID string from backend
   companyTin: string;
   companyName: string;
   companyEmail: string;

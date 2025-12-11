@@ -72,10 +72,37 @@ export default function ProfilePage() {
         console.log("ProfilePage: Application data:", response.data);
 
         const userData = response.data.data;
-        setApplication(userData);
         
         // Check if this is a company account
-        setIsCompany(!!userData.tinCompany);
+        const isCompanyAccount = !!userData.tinCompany;
+        setIsCompany(isCompanyAccount);
+        
+        // Map company fields to standard application fields for consistent rendering
+        if (isCompanyAccount) {
+          console.log("ProfilePage: Raw company data from backend:", userData);
+          console.log("ProfilePage: Available date fields:", {
+            applicationDate: userData.applicationDate,
+            createdAt: userData.createdAt,
+            registrationDate: userData.registrationDate,
+            registeredAt: userData.registeredAt,
+            createdDate: userData.createdDate,
+          });
+          
+          const mappedData = {
+            ...userData,
+            fullName: userData.companyName || userData.fullName,
+            tpin: userData.tinCompany,
+            email: userData.companyEmail || userData.email,
+            phoneNumber: userData.companyPhoneNumber || userData.phoneNumber,
+            businessStatus: userData.status || userData.businessStatus || "COMPANY",
+            applicationDate: userData.applicationDate || userData.createdAt || userData.registrationDate || userData.registeredAt || userData.createdDate,
+          };
+          console.log("ProfilePage: Mapped company data:", mappedData);
+          console.log("ProfilePage: Final applicationDate:", mappedData.applicationDate);
+          setApplication(mappedData);
+        } else {
+          setApplication(userData);
+        }
       } catch (err: any) {
         console.error("ProfilePage: Error fetching application:", err);
 
@@ -104,16 +131,35 @@ export default function ProfilePage() {
     const fetchDocuments = async () => {
       if (!application) return;
 
+      // Skip document fetching for company accounts
+      if (isCompany) {
+        console.log("ProfilePage: Company account detected, skipping documents fetch");
+        setDocumentsLoading(false);
+        setDocuments([]);
+        return;
+      }
+
+      // For individual accounts, use tpin
+      const tin = application.tpin;
+      
+      if (!tin) {
+        console.log("ProfilePage: No TPIN available, skipping documents fetch");
+        setDocumentsLoading(false);
+        return;
+      }
+
       try {
         setDocumentsLoading(true);
+        console.log("ProfilePage: Fetching documents for TPIN:", tin);
 
-        const response = await getAllDocuments(application.tpin);
+        const response = await getAllDocuments(tin);
         console.log("ProfilePage: Documents data:", response.data);
 
         setDocuments(response.data.data || []);
       } catch (err: any) {
         console.error("ProfilePage: Error fetching documents:", err);
-        // Don't show error toast for documents, just log it
+        // Don't show error toast for documents, just set empty array
+        setDocuments([]);
       } finally {
         setDocumentsLoading(false);
       }
@@ -516,24 +562,26 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <Phone className="h-5 w-5 text-gray-400 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500">Phone Number</p>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedData.phoneNumber}
-                          onChange={(e) => setEditedData({ ...editedData, phoneNumber: e.target.value })}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      ) : (
-                        <p className="text-base font-semibold text-gray-800">
-                          {application.phoneNumber}
-                        </p>
-                      )}
+                  {!isCompany && (
+                    <div className="flex items-start space-x-3">
+                      <Phone className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Phone Number</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedData.phoneNumber}
+                            onChange={(e) => setEditedData({ ...editedData, phoneNumber: e.target.value })}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        ) : (
+                          <p className="text-base font-semibold text-gray-800">
+                            {application.phoneNumber}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex items-start space-x-3">
                     <Briefcase className="h-5 w-5 text-gray-400 mt-1" />
@@ -716,15 +764,17 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-start space-x-3">
-                    <Calendar className="h-5 w-5 text-gray-400 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500">Application Date</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {formatDate(application.applicationDate)}
-                      </p>
+                  {!isCompany && (
+                    <div className="flex items-start space-x-3">
+                      <Calendar className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Application Date</p>
+                        <p className="text-base font-semibold text-gray-800">
+                          {formatDate(application.applicationDate)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {application.reviewedBy && (
                     <div className="flex items-start space-x-3">
