@@ -12,10 +12,14 @@ import {
   Upload,
   Users,
   Eye,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
 import { getCompanyMembers } from "../services/getCompanyMembers";
+import { updateCompanyMember } from "../services/updateCompanyMember";
+import { deleteCompanyMember } from "../services/deleteCompanyMember";
 import type { CompanyAccount, CompanyMember } from "../types/company";
 import { AccountType } from "../types/company";
 import { ApplicationStatus } from "../types/application";
@@ -152,6 +156,61 @@ export default function CompanyDashboard() {
     navigate("/documents");
   };
 
+  const handleEditMember = async (member: CompanyMember) => {
+    const newFullName = prompt("Enter new full name:", member.fullName);
+    if (newFullName === null) return; // User cancelled
+
+    const newEmail = prompt("Enter new email:", member.email);
+    if (newEmail === null) return; // User cancelled
+
+    const newPhone = prompt("Enter new phone number:", member.phoneNumber);
+    if (newPhone === null) return; // User cancelled
+
+    const newNid = prompt("Enter new NID/Passport:", member.nid);
+    if (newNid === null) return; // User cancelled
+
+    try {
+      await updateCompanyMember({
+        memberId: member.memberId,
+        fullName: newFullName,
+        email: newEmail,
+        phoneNumber: newPhone,
+        nid: newNid,
+      });
+
+      // Refresh members list
+      if (companyAccount) {
+        const membersResponse = await getCompanyMembers(companyAccount.companyId);
+        if (membersResponse.data.data) {
+          setMembers(membersResponse.data.data);
+        }
+      }
+
+      showToast("Member updated successfully!", "success");
+    } catch (err: any) {
+      console.error("Error updating member:", err);
+      showToast(err.response?.data?.message || "Failed to update member", "error");
+    }
+  };
+
+  const handleDeleteMember = async (member: CompanyMember) => {
+    if (!window.confirm(`Are you sure you want to delete ${member.fullName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteCompanyMember(member.memberId);
+
+      // Refresh members list
+      setMembers(members.filter(m => m.memberId !== member.memberId));
+
+      showToast("Member deleted successfully!", "success");
+    } catch (err: any) {
+      console.error("Error deleting member:", err);
+      showToast(err.response?.data?.message || "Failed to delete member", "error");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -235,6 +294,14 @@ export default function CompanyDashboard() {
             <button className="w-full flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-xl font-semibold border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               <Users size={20} className="flex-shrink-0" />
               <span>Company Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <User size={20} className="flex-shrink-0" />
+              <span>Company Profile</span>
             </button>
           </nav>
 
@@ -413,7 +480,7 @@ export default function CompanyDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div
-                                className="flex items-center justify-center"
+                                className="flex items-center justify-center gap-2"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {/* Show upload button when status is REGISTERED (no documents submitted yet) */}
@@ -440,6 +507,30 @@ export default function CompanyDashboard() {
                                     />
                                   </button>
                                 )}
+                                
+                                {/* Edit button */}
+                                <button
+                                  onClick={() => handleEditMember(member)}
+                                  className="p-2.5 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                  title="Edit member"
+                                >
+                                  <Edit
+                                    size={16}
+                                    className="group-hover:scale-110 transition-transform"
+                                  />
+                                </button>
+
+                                {/* Delete button */}
+                                <button
+                                  onClick={() => handleDeleteMember(member)}
+                                  className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                  title="Delete member"
+                                >
+                                  <Trash2
+                                    size={16}
+                                    className="group-hover:scale-110 transition-transform"
+                                  />
+                                </button>
                               </div>
                             </td>
                           </tr>

@@ -18,10 +18,14 @@ import {
   Award,
   MapPin,
   Upload,
+  Edit,
+  Save,
+  XCircle,
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
 import { getAllDocuments } from "../services/getDocuments";
+import { updateProfile } from "../services/updateProfile";
 
 import type { Application } from "../types/application";
 import { ApplicationStatus, BusinessStatus } from "../types/application";
@@ -37,6 +41,17 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCompany, setIsCompany] = useState(false);
+  const [editedData, setEditedData] = useState({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    nid: "",
+  });
+  const [editedAddress, setEditedAddress] = useState("");
 
   const navigate = useNavigate();
 
@@ -56,7 +71,11 @@ export default function ProfilePage() {
         const response = await getCurrentUser();
         console.log("ProfilePage: Application data:", response.data);
 
-        setApplication(response.data.data);
+        const userData = response.data.data;
+        setApplication(userData);
+        
+        // Check if this is a company account
+        setIsCompany(!!userData.tinCompany);
       } catch (err: any) {
         console.error("ProfilePage: Error fetching application:", err);
 
@@ -107,6 +126,102 @@ export default function ProfilePage() {
     localStorage.removeItem("authToken");
     localStorage.removeItem("tinNumber");
     navigate("/");
+  };
+
+  const handleEdit = () => {
+    if (application) {
+      setEditedData({
+        fullName: application.fullName || "",
+        email: application.email || "",
+        phoneNumber: application.phoneNumber || "",
+        nid: application.nid || "",
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedData({
+      fullName: "",
+      email: "",
+      phoneNumber: "",
+      nid: "",
+    });
+  };
+
+  const handleEditAddress = () => {
+    if (application && application.workAddress) {
+      setEditedAddress(application.workAddress.name || "");
+      setIsEditingAddress(true);
+    }
+  };
+
+  const handleCancelEditAddress = () => {
+    setIsEditingAddress(false);
+    setEditedAddress("");
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await updateProfile(editedData);
+      
+      // Refresh application data
+      const response = await getCurrentUser();
+      setApplication(response.data.data);
+      
+      setIsEditing(false);
+      alert("Profile updated successfully!");
+    } catch (err: any) {
+      console.error("ProfilePage: Error updating profile:", err);
+      alert(err.response?.data?.message || "Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!application) return;
+    
+    try {
+      setIsSaving(true);
+      console.log("ProfilePage: Updating address with:", editedAddress);
+      
+      // Backend requires all fields, so send existing data with updated address
+      await updateProfile({
+        fullName: application.fullName,
+        email: application.email,
+        phoneNumber: application.phoneNumber,
+        nid: application.nid,
+        workAddress: editedAddress,
+      });
+      
+      // Refresh application data
+      const response = await getCurrentUser();
+      console.log("ProfilePage: Refreshed data after address update:", response.data.data);
+      console.log("ProfilePage: workAddress from response:", response.data.data.workAddress);
+      
+      const updatedData = response.data.data;
+      console.log("ProfilePage: Setting application to:", updatedData);
+      setApplication(updatedData);
+      
+      setIsEditingAddress(false);
+      
+      // Check if update was actually saved
+      if (updatedData.workAddress?.name === editedAddress) {
+        alert("Address updated successfully!");
+      } else {
+        alert("Address was sent to backend but the response shows old value. Backend may not have saved the update. Please refresh the page to see current data.");
+      }
+    } catch (err: any) {
+      console.error("ProfilePage: Error updating address:", err);
+      console.error("ProfilePage: Error response data:", err.response?.data);
+      console.error("ProfilePage: Error response status:", err.response?.status);
+      alert(err.response?.data?.message || err.response?.data || "Failed to update address");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatDate = (dateString: string | undefined): string => {
@@ -221,16 +336,16 @@ export default function ProfilePage() {
           {/* Navigation */}
           <nav className="p-4 space-y-2 flex-1">
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(isCompany ? "/company-dashboard" : "/dashboard")}
               className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <FileText size={20} />
-              <span>Dashboard</span>
+              <span>{isCompany ? "Company Dashboard" : "Dashboard"}</span>
             </button>
 
             <button className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium border border-blue-200">
               <User size={20} />
-              <span>Profile</span>
+              <span>{isCompany ? "Company Profile" : "Profile"}</span>
             </button>
 
             {canUploadDocuments && (
@@ -283,11 +398,39 @@ export default function ProfilePage() {
 
             {/* Personal Information Section */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
                   <User className="h-5 w-5 mr-2" />
-                  Personal Information
+                  {isCompany ? "Company Information" : "Personal Information"}
                 </h2>
+                {!isEditing ? (
+                  <button
+                    onClick={handleEdit}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition duration-200"
+                    >
+                      <Save className="h-4 w-4" />
+                      {isSaving ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded-lg transition duration-200"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="p-6">
@@ -295,10 +438,19 @@ export default function ProfilePage() {
                   <div className="flex items-start space-x-3">
                     <User className="h-5 w-5 text-gray-400 mt-1" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-500">Full Name</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {application.fullName}
-                      </p>
+                      <p className="text-sm text-gray-500">{isCompany ? "Business Name" : "Full Name"}</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedData.fullName}
+                          onChange={(e) => setEditedData({ ...editedData, fullName: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      ) : (
+                        <p className="text-base font-semibold text-gray-800">
+                          {application.fullName}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -312,23 +464,55 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3">
-                    <CreditCard className="h-5 w-5 text-gray-400 mt-1" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500">National ID</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {application.nid}
-                      </p>
+                  {!isCompany && (
+                    <div className="flex items-start space-x-3">
+                      <CreditCard className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">National ID / Passport</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedData.nid}
+                            onChange={(e) => setEditedData({ ...editedData, nid: e.target.value })}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        ) : (
+                          <p className="text-base font-semibold text-gray-800">
+                            {application.nid}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {isCompany && (
+                    <div className="flex items-start space-x-3">
+                      <CreditCard className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Company TIN</p>
+                        <p className="text-base font-semibold text-gray-800">
+                          {application.tinCompany}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex items-start space-x-3">
                     <Mail className="h-5 w-5 text-gray-400 mt-1" />
                     <div className="flex-1">
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-base font-semibold text-gray-800 break-all">
-                        {application.email}
-                      </p>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={editedData.email}
+                          onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      ) : (
+                        <p className="text-base font-semibold text-gray-800 break-all">
+                          {application.email}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -336,9 +520,18 @@ export default function ProfilePage() {
                     <Phone className="h-5 w-5 text-gray-400 mt-1" />
                     <div className="flex-1">
                       <p className="text-sm text-gray-500">Phone Number</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {application.phoneNumber}
-                      </p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedData.phoneNumber}
+                          onChange={(e) => setEditedData({ ...editedData, phoneNumber: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      ) : (
+                        <p className="text-base font-semibold text-gray-800">
+                          {application.phoneNumber}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -371,11 +564,39 @@ export default function ProfilePage() {
             {/* Address Information Section */}
             {application.workAddress && (
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-gray-200">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-800 flex items-center">
                     <MapPin className="h-5 w-5 mr-2" />
                     Address Information
                   </h2>
+                  {!isEditingAddress ? (
+                    <button
+                      onClick={handleEditAddress}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveAddress}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition duration-200"
+                      >
+                        <Save className="h-4 w-4" />
+                        {isSaving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={handleCancelEditAddress}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded-lg transition duration-200"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -383,9 +604,19 @@ export default function ProfilePage() {
                     <MapPin className="h-5 w-5 text-gray-400 mt-1" />
                     <div className="flex-1">
                       <p className="text-sm text-gray-500">Work Address</p>
-                      <p className="text-base font-semibold text-gray-800">
-                        {application.workAddress.name}
-                      </p>
+                      {isEditingAddress ? (
+                        <textarea
+                          value={editedAddress}
+                          onChange={(e) => setEditedAddress(e.target.value)}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                          placeholder="Enter work address"
+                        />
+                      ) : (
+                        <p className="text-base font-semibold text-gray-800">
+                          {application.workAddress.name}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -18,8 +18,8 @@ const ResetPasswordPage: React.FC = () => {
     const tokenFromUrl = searchParams.get("token");
     const typeFromUrl = searchParams.get("type");
     
-    // Verify this is for tax professional accounts
-    if (typeFromUrl && typeFromUrl !== "taxprofessional") {
+    // Verify this is for tax professional or company accounts
+    if (typeFromUrl && typeFromUrl !== "taxprofessional" && typeFromUrl !== "company") {
       setError("This reset link is not valid for tax professional accounts. Please use the correct reset link.");
       return;
     }
