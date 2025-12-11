@@ -179,26 +179,30 @@ const SignUpPage: React.FC = () => {
       if (accountType === "INDIVIDUAL") {
         response = await addApplicant(userData);
       } else {
-        // Company registration - send location names (not IDs)
-        const companyData = {
+        // Company registration - only TIN and password are required, rest are optional
+        const companyData: any = {
           companyTin: tin,
-          companyName: businessName,
-          companyEmail: email,
-          province: province,
-          district: district,
-          sector: sector,
-          cell: cell,
-          village: village,
-          companyAddress: detailedAddress,
-          companyPhoneNumber: phoneNumber,
-          companyFax: fax,
-          category,
+          companyName: businessName || "",
           password,
-          applicantNames: fullname,
           accountType,
+          // Optional fields - only include if provided
+          companyEmail: email || "",
+          companyPhoneNumber: phoneNumber || "",
+          province: province || "",
+          district: district || "",
+          sector: sector || "",
+          cell: cell || "",
+          village: village || "",
+          companyAddress: detailedAddress || "",
+          companyFax: fax || "",
+          category: category || "",
+          applicantNames: fullname || "",
         };
 
-        console.log("SignUpPage: Registering company with data:", companyData);
+        console.log(
+          "SignUpPage: Registering company with data (TIN + password required, others optional):",
+          companyData
+        );
         response = await addCompany(companyData);
       }
 
@@ -417,7 +421,7 @@ const SignUpPage: React.FC = () => {
                   placeholder={
                     accountType === "COMPANY" ? "Company TIN" : "TIN"
                   }
-                  disabled={false}
+                  disabled={true}
                 />,
                 "tin"
               )}
@@ -431,18 +435,18 @@ const SignUpPage: React.FC = () => {
                       value={fullname}
                       onChange={(e) => setFullname(e.target.value)}
                       placeholder="Full Names"
-                      disabled={false}
+                      disabled={true}
                     />,
                     "fullname"
                   )
                 : renderField(
                     <ApplicantForm
-                      label="Company Name"
+                      label="Company Name (Optional)"
                       icon={<MdBusiness />}
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder="Company Name"
-                      disabled={false}
+                      placeholder="Company Name (Optional)"
+                      disabled={true}
                     />,
                     "businessName"
                   )}
@@ -452,15 +456,19 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label={
                     accountType === "COMPANY"
-                      ? "Company Email"
+                      ? "Company Email (Optional)"
                       : "Email Address"
                   }
                   type="email"
                   icon={<FaEnvelope />}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email Address"
-                  disabled={false}
+                  placeholder={
+                    accountType === "COMPANY"
+                      ? "Email Address (Optional)"
+                      : "Email Address"
+                  }
+                  disabled={true}
                 />,
                 "email"
               )}
@@ -473,7 +481,7 @@ const SignUpPage: React.FC = () => {
                     value={nid}
                     onChange={(e) => setNid(e.target.value)}
                     placeholder="National ID or Passport Number"
-                    disabled={false}
+                    disabled={true}
                   />,
                   "nid"
                 )}
@@ -483,7 +491,7 @@ const SignUpPage: React.FC = () => {
                 <div className="flex flex-col">
                   <label className="text-gray-700 font-medium mb-2">
                     {accountType === "COMPANY"
-                      ? "Company Phone Number"
+                      ? "Company Phone Number (Optional)"
                       : "Phone Number"}
                   </label>
                   <div className="relative">
@@ -498,9 +506,13 @@ const SignUpPage: React.FC = () => {
                         }
                         setPhoneNumber(value);
                       }}
-                      placeholder="+250788123456"
-                      disabled={false}
-                      className="w-full bg-white border border-gray-300 rounded-lg py-4 pl-5 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      placeholder={
+                        accountType === "COMPANY"
+                          ? "+250788123456 (Optional)"
+                          : "+250788123456"
+                      }
+                      disabled={true}
+                      className="w-full border border-gray-300 rounded-lg py-4 pl-5 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
                       <FaPhone />
@@ -517,7 +529,7 @@ const SignUpPage: React.FC = () => {
                   value={province}
                   onChange={(e) => setProvince(e.target.value)}
                   placeholder="Province"
-                  disabled={false}
+                  disabled={true}
                 />,
                 "province"
               )}
@@ -528,7 +540,7 @@ const SignUpPage: React.FC = () => {
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
                   placeholder="District"
-                  disabled={false}
+                  disabled={true}
                 />,
                 "district"
               )}
@@ -539,7 +551,7 @@ const SignUpPage: React.FC = () => {
                   value={sector}
                   onChange={(e) => setSector(e.target.value)}
                   placeholder="Sector"
-                  disabled={false}
+                  disabled={true}
                 />,
                 "sector"
               )}
@@ -550,7 +562,7 @@ const SignUpPage: React.FC = () => {
                   value={cell}
                   onChange={(e) => setCell(e.target.value)}
                   placeholder="Cell"
-                  disabled={false}
+                  disabled={true}
                 />,
                 "cell"
               )}
@@ -561,7 +573,7 @@ const SignUpPage: React.FC = () => {
                   value={village}
                   onChange={(e) => setVillage(e.target.value)}
                   placeholder="Village"
-                  disabled={false}
+                  disabled={true}
                 />,
                 "village"
               )}
@@ -591,7 +603,7 @@ const SignUpPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={registering}
+                disabled={registering || !isTinValidated}
                 className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-full transition duration-200"
               >
                 {registering ? "Registering..." : "Register"}

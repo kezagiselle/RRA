@@ -73,7 +73,7 @@ function ApplicantForm({ label, icon, type, value, onChange, placeholder, applic
               onChange={onChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
               placeholder={placeholder}
               disabled={disabled}
-              className={`w-full bg-gray-50 border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full border border-gray-300 rounded-lg py-4 px-5 pr-10 text-base text-gray-800 focus:ring-2 focus:ring-blue-200 focus:border-blue-200 outline-none ${disabled ? 'bg-gray-200 opacity-60 cursor-not-allowed' : 'bg-gray-50'}`}
             />
             {icon && (
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">

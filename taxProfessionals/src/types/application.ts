@@ -19,6 +19,7 @@ export enum BachelorDegree {
   FINANCE = "FINANCE",
   ECONOMICS = "ECONOMICS",
   COMMERCE = "COMMERCE",
+  MANAGEMENT = "MANAGEMENT",
 }
 
 export enum ProfessionalQualification {
