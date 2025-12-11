@@ -142,6 +142,19 @@ const LoginPage: React.FC = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
 
+        <div className="text-center pt-2">
+          <a
+            href="/forgot-password"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/forgot-password");
+            }}
+            className="text-blue-400 hover:text-blue-600 text-xs sm:text-sm underline transition duration-200"
+          >
+            Forgot Password?
+          </a>
+        </div>
+
         <div className="text-center pt-3 sm:pt-4">
           <p className="text-gray-600 text-sm sm:text-base">
             Don't have an account?{" "}

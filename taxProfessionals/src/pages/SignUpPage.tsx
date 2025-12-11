@@ -15,6 +15,7 @@ import Errors from "../components/Errors";
 import { addApplicant } from "../services/SignUp";
 import { addCompany } from "../services/CompanyRegister";
 import { validateTin } from "../services/ValidateTin";
+import { sendPasswordEmail } from "../services/SendPasswordEmail";
 
 const SignUpPage: React.FC = () => {
   console.log("SignUpPage: Component rendering");
@@ -203,8 +204,25 @@ const SignUpPage: React.FC = () => {
 
       console.log("SignUpPage: Registration successful:", response.data);
 
+      // Send password email after successful registration
+      try {
+        await sendPasswordEmail({
+          email: email,
+          password: password,
+          fullName: accountType === "INDIVIDUAL" ? fullname : businessName,
+          accountType: accountType,
+        });
+        console.log("SignUpPage: Password email sent successfully");
+      } catch (emailErr: any) {
+        console.error("SignUpPage: Failed to send password email:", emailErr);
+        // Don't block the registration flow if email fails
+      }
+
       // Success
-      alert("Registration successful! Please login with your credentials.");
+      alert(
+        "Registration successful! A confirmation email with your password has been sent to " +
+          email
+      );
       navigate("/");
     } catch (err: any) {
       console.error("SignUpPage: Registration error:", err);
@@ -447,14 +465,14 @@ const SignUpPage: React.FC = () => {
                 "email"
               )}
 
-              {/* National ID - Only for Individual */}
+              {/* National ID / Passport - Only for Individual */}
               {accountType === "INDIVIDUAL" &&
                 renderField(
                   <ApplicantForm
-                    label="National ID"
+                    label="National ID / Passport"
                     value={nid}
                     onChange={(e) => setNid(e.target.value)}
-                    placeholder="National ID"
+                    placeholder="National ID or Passport Number"
                     disabled={false}
                   />,
                   "nid"
@@ -566,10 +584,10 @@ const SignUpPage: React.FC = () => {
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={() => navigate("/")}
+                onClick={() => setAccountType("")}
                 className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
               >
-                Cancel
+                Back
               </button>
               <button
                 type="submit"

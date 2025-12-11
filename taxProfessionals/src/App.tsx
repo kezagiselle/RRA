@@ -9,6 +9,8 @@ import SignUpPage from "./pages/SignUpPage";
 import DocumentPage from "./pages/DocumentPage";
 import ProfilePage from "./pages/ProfilePage";
 import AddMemberPage from "./pages/AddMemberPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected Routes */}
         <Route path="/applicant" element={<ApplicantPage />} />
