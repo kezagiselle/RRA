@@ -2,13 +2,27 @@ import axios from 'axios';
 
 const REST_API_BASE_URL = 'http://localhost:8080/api/documents/update-rejected'
 
-export const updateRejectedDocument = (documentId: string | number, file: File, documentType: string) => {
+export const updateRejectedDocument = (
+    documentId: string | number, 
+    file: File, 
+    documentType: string,
+    additionalFields?: Record<string, string>
+) => {
     const documentIdString = String(documentId);
     
     // Create FormData with file and documentType
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentType', documentType);
+    
+    // Add additional fields if provided (e.g., certificateType, bachelorDegree, etc.)
+    if (additionalFields) {
+        Object.entries(additionalFields).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                formData.append(key, value);
+            }
+        });
+    }
     
     // Get authentication token from localStorage
     const token = localStorage.getItem('authToken');
