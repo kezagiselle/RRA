@@ -5,7 +5,6 @@ import {
   FaEnvelope,
   FaPhone,
   FaBuilding,
-  FaCheckCircle,
 } from "react-icons/fa";
 import { MdBusiness } from "react-icons/md";
 import rra from "../imgs/rra.png";
@@ -14,8 +13,13 @@ import ApplicantForm from "../components/ApplicantForm";
 import Errors from "../components/Errors";
 import { addApplicant } from "../services/SignUp";
 import { addCompany } from "../services/CompanyRegister";
-import { validateTin } from "../services/ValidateTin";
+// import { validateTin } from "../services/ValidateTin";
 import { sendPasswordEmail } from "../services/SendPasswordEmail";
+import { getProvince } from "../services/Province";
+import { getDistrict } from "../services/District";
+import { getSector } from "../services/Sector";
+import { getCell } from "../services/Cell";
+import { getVillage } from "../services/Villages";
 
 const SignUpPage: React.FC = () => {
   console.log("SignUpPage: Component rendering");
@@ -38,6 +42,14 @@ const SignUpPage: React.FC = () => {
   const [cell, setCell] = useState("");
   const [village, setVillage] = useState("");
 
+  // Location data lists
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [sectors, setSectors] = useState<any[]>([]);
+  const [cells, setCells] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+
+
   // Additional fields
   const [category, setCategory] = useState("");
   const [detailedAddress, setDetailedAddress] = useState("");
@@ -45,17 +57,32 @@ const SignUpPage: React.FC = () => {
   const [businessName, setBusinessName] = useState("");
 
   // UI state
-  const [validating, setValidating] = useState(false);
+  // const [validating, setValidating] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<any>({});
 
   // Validation state
-  const [validationTin, setValidationTin] = useState("");
-  const [validationData, setValidationData] = useState<any>(null);
-  const [isTinValidated, setIsTinValidated] = useState(false);
+  // const [validationTin, setValidationTin] = useState("");
+  // const [validationData, setValidationData] = useState<any>(null);
+  // const [isTinValidated, setIsTinValidated] = useState(false);
 
   const navigate = useNavigate();
+
+  // Fetch provinces on mount
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const response = await getProvince();
+        if (response.data.success) {
+          setProvinces(response.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch provinces:", err);
+      }
+    };
+    fetchProvinces();
+  }, []);
 
   // Clear form when account type changes
   useEffect(() => {
@@ -80,74 +107,145 @@ const SignUpPage: React.FC = () => {
     setDetailedAddress("");
     setFax("");
     setBusinessName("");
-    setValidationTin("");
-    setValidationData(null);
-    setIsTinValidated(false);
+    // setValidationTin("");
+    // setValidationData(null);
+    // setIsTinValidated(false);
     setError("");
     setErrors({});
+    
+    // Reset location lists except provinces
+    setDistricts([]);
+    setSectors([]);
+    setCells([]);
+    setVillages([]);
+    setVillages([]);
   };
 
-  const handleValidateTin = async () => {
-    if (!validationTin) {
-      setError("Please enter a TIN to validate");
-      return;
-    }
-
-    setValidating(true);
-    setError("");
-    setValidationData(null);
-    setIsTinValidated(false);
-
-    try {
-      const response = await validateTin(validationTin);
-      console.log("SignUpPage: TIN validation response:", response.data);
-
-      // The response structure is: { success, message, data: {...}, timestamp }
-      const apiResponse = response.data;
-      const supplierData = apiResponse.data; // The actual supplier data
-
-      console.log("SignUpPage: TIN validation data:", supplierData);
-
-      setValidationData(apiResponse);
-
-      // Auto-fill form fields with validated data (matching API field names)
-      // Common fields for both Individual and Company
-      setTin(supplierData.SupplierTin || validationTin);
-      setFullname(supplierData.SupplierName || ""); // For Individual: names, For Company: we'll use businessName
-      setBusinessName(supplierData.SupplierName || ""); // Company name
-      setEmail(supplierData.EmailAddress || "");
-      setPhoneNumber(supplierData.PhoneNumber || "");
-      setNid(supplierData.NationalId || "");
-
-      // Location fields
-      setProvince(supplierData.Province || "");
-      setDistrict(supplierData.District || "");
-      setSector(supplierData.Sector || "");
-      setCell(supplierData.Cell || "");
-      setVillage(supplierData.Village || "");
-
-      setIsTinValidated(true);
-      setValidating(false);
-      setError("");
-
-      // Set the validated TIN
-      setValidationTin(supplierData.SupplierTin || validationTin);
-    } catch (err: any) {
-      console.error("SignUpPage: TIN validation error:", err);
-      setValidating(false);
-      setError(
-        err.response?.data?.message ||
-          "Failed to validate TIN. Please check the number and try again."
-      );
-      setValidationData(null);
-      setIsTinValidated(false);
+  // Location change handlers
+  const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const pName = e.target.value;
+    setProvince(pName);
+    
+    // Reset lower levels
+    setDistrict("");
+    setSector("");
+    setCell("");
+    setVillage("");
+    setDistricts([]);
+    setSectors([]);
+    setCells([]);
+    setVillages([]);
+    if (pName) {
+      const selectedProv = provinces.find(p => p.name === pName);
+      if (selectedProv) {
+        const pId = selectedProv.locationId;
+        try {
+          const response = await getDistrict(pId);
+          if (response.data.success) {
+            setDistricts(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch districts:", err);
+        }
+      }
     }
   };
+
+  const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const dName = e.target.value;
+    setDistrict(dName);
+    
+    // Reset lower levels
+    setSector("");
+    setCell("");
+    setVillage("");
+    setSectors([]);
+    setCells([]);
+    setVillages([]);
+    if (dName) {
+      const selectedDist = districts.find(d => d.name === dName);
+      if (selectedDist) {
+        const dId = selectedDist.locationId;
+        try {
+          const response = await getSector(dId);
+          if (response.data.success) {
+            setSectors(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch sectors:", err);
+        }
+      }
+    }
+  };
+
+  const handleSectorChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sName = e.target.value;
+    setSector(sName);
+    
+    // Reset lower levels
+    setCell("");
+    setVillage("");
+    setCells([]);
+    setVillages([]);
+    if (sName) {
+      const selectedSect = sectors.find(s => s.name === sName);
+      if (selectedSect) {
+        const sId = selectedSect.locationId;
+        try {
+          const response = await getCell(sId);
+          if (response.data.success) {
+            setCells(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch cells:", err);
+        }
+      }
+    }
+  };
+
+  const handleCellChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cName = e.target.value;
+    setCell(cName);
+    
+    // Reset lower level
+    setVillage("");
+    setVillages([]);
+
+    if (cName) {
+      const selectedCell = cells.find(c => c.name === cName);
+      if (selectedCell) {
+        const cId = selectedCell.locationId;
+        try {
+          const response = await getVillage(cId);
+          if (response.data.success) {
+            setVillages(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch villages:", err);
+        }
+      }
+    }
+  };
+
+  const handleVillageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setVillage(e.target.value);
+  };
+
+  // Removed handleValidateTin as validation is now manual
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Mandatory field check
+    const isIndividual = accountType === "INDIVIDUAL";
+    const isCompany = accountType === "COMPANY";
 
-    // No validation - proceed directly to registration
+    if (!tin || !email || !phoneNumber || !password || !province || !district || !sector || !cell || !village || 
+        (isIndividual && (!fullname || !nid)) || 
+        (isCompany && !businessName)) {
+      setError("All fields are mandatory. Please fill in all details.");
+      return;
+    }
+
     setRegistering(true);
     setError("");
 
@@ -246,8 +344,8 @@ const SignUpPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
-      <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl bg-white p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl space-y-4 sm:space-y-5 lg:space-y-6">
+    <div className="mdc-page">
+      <div className="mdc-card w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5 lg:space-y-6">
         {/* Logo */}
         <div className="flex justify-center mb-2 sm:mb-3 lg:mb-4">
           <img
@@ -349,55 +447,10 @@ const SignUpPage: React.FC = () => {
               </div>
             </div>
 
-            {/* TIN Validation Section */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                TIN Validation
-                {isTinValidated && (
-                  <FaCheckCircle className="text-green-500 text-lg" />
-                )}
-              </h3>
-              <div className="flex flex-col sm:flex-row gap-2 items-end">
-                <div className="flex-grow w-full">
-                  <ApplicantForm
-                    label="Enter TIN to Validate"
-                    value={validationTin}
-                    onChange={(e) => {
-                      setValidationTin(e.target.value);
-                      // Reset validation if TIN changes
-                      if (isTinValidated && e.target.value !== tin) {
-                        setIsTinValidated(false);
-                      }
-                    }}
-                    placeholder="Enter TIN"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleValidateTin}
-                  disabled={validating || isTinValidated || !accountType}
-                  className={`w-full sm:w-auto font-semibold py-4 px-6 rounded-lg transition duration-200 mb-0 ${
-                    isTinValidated
-                      ? "bg-green-100 text-green-700 cursor-default"
-                      : "bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  }`}
-                >
-                  {validating
-                    ? "Validating..."
-                    : isTinValidated
-                    ? "Validated"
-                    : "Validate"}
-                </button>
-              </div>
-              {error && !validationData && (
-                <p className="text-red-500 text-sm mt-2">{error}</p>
-              )}
-              {isTinValidated && (
-                <p className="text-green-600 text-sm mt-2">
-                  ✓ TIN validated successfully! All fields have been
-                  auto-filled.
-                </p>
-              )}
+            <div className="bg-blue-50 p-3 rounded-lg mb-4">
+              <p className="text-sm text-blue-800 text-center font-medium italic">
+                Please fill in all details manually. All fields are mandatory.
+              </p>
             </div>
 
             {/* Registration Information */}
@@ -421,7 +474,7 @@ const SignUpPage: React.FC = () => {
                   placeholder={
                     accountType === "COMPANY" ? "Company TIN" : "TIN"
                   }
-                  disabled={true}
+                  disabled={false}
                 />,
                 "tin"
               )}
@@ -435,18 +488,18 @@ const SignUpPage: React.FC = () => {
                       value={fullname}
                       onChange={(e) => setFullname(e.target.value)}
                       placeholder="Full Names"
-                      disabled={true}
+                      disabled={false}
                     />,
                     "fullname"
                   )
                 : renderField(
                     <ApplicantForm
-                      label="Company Name (Optional)"
+                      label="Company Name"
                       icon={<MdBusiness />}
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder="Company Name (Optional)"
-                      disabled={true}
+                      placeholder="Company Name"
+                      disabled={false}
                     />,
                     "businessName"
                   )}
@@ -456,7 +509,7 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label={
                     accountType === "COMPANY"
-                      ? "Company Email (Optional)"
+                      ? "Company Email"
                       : "Email Address"
                   }
                   type="email"
@@ -465,10 +518,10 @@ const SignUpPage: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={
                     accountType === "COMPANY"
-                      ? "Email Address (Optional)"
+                      ? "Email Address"
                       : "Email Address"
                   }
-                  disabled={true}
+                  disabled={false}
                 />,
                 "email"
               )}
@@ -481,7 +534,7 @@ const SignUpPage: React.FC = () => {
                     value={nid}
                     onChange={(e) => setNid(e.target.value)}
                     placeholder="National ID or Passport Number"
-                    disabled={true}
+                    disabled={false}
                   />,
                   "nid"
                 )}
@@ -491,7 +544,7 @@ const SignUpPage: React.FC = () => {
                 <div className="flex flex-col">
                   <label className="text-gray-700 font-medium mb-2">
                     {accountType === "COMPANY"
-                      ? "Company Phone Number (Optional)"
+                      ? "Company Phone Number"
                       : "Phone Number"}
                   </label>
                   <div className="relative">
@@ -508,11 +561,11 @@ const SignUpPage: React.FC = () => {
                       }}
                       placeholder={
                         accountType === "COMPANY"
-                          ? "+250788123456 (Optional)"
+                          ? "+250788123456"
                           : "+250788123456"
                       }
-                      disabled={true}
-                      className="w-full border border-gray-300 rounded-lg py-4 pl-5 pr-5 text-base text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={false}
+                      className="mdc-input py-4 pl-5 pr-5 text-base"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-2xl pointer-events-none">
                       <FaPhone />
@@ -527,9 +580,10 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label="Province"
                   value={province}
-                  onChange={(e) => setProvince(e.target.value)}
+                  onChange={(e) => handleProvinceChange(e as React.ChangeEvent<HTMLSelectElement>)}
                   placeholder="Province"
-                  disabled={true}
+                  disabled={false}
+                  applicantData={provinces}
                 />,
                 "province"
               )}
@@ -538,9 +592,10 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label="District"
                   value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
+                  onChange={(e) => handleDistrictChange(e as React.ChangeEvent<HTMLSelectElement>)}
                   placeholder="District"
-                  disabled={true}
+                  disabled={!province}
+                  applicantData={districts}
                 />,
                 "district"
               )}
@@ -549,9 +604,10 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label="Sector"
                   value={sector}
-                  onChange={(e) => setSector(e.target.value)}
+                  onChange={(e) => handleSectorChange(e as React.ChangeEvent<HTMLSelectElement>)}
                   placeholder="Sector"
-                  disabled={true}
+                  disabled={!district}
+                  applicantData={sectors}
                 />,
                 "sector"
               )}
@@ -560,9 +616,10 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label="Cell"
                   value={cell}
-                  onChange={(e) => setCell(e.target.value)}
+                  onChange={(e) => handleCellChange(e as React.ChangeEvent<HTMLSelectElement>)}
                   placeholder="Cell"
-                  disabled={true}
+                  disabled={!sector}
+                  applicantData={cells}
                 />,
                 "cell"
               )}
@@ -571,9 +628,10 @@ const SignUpPage: React.FC = () => {
                 <ApplicantForm
                   label="Village"
                   value={village}
-                  onChange={(e) => setVillage(e.target.value)}
+                  onChange={(e) => handleVillageChange(e as React.ChangeEvent<HTMLSelectElement>)}
                   placeholder="Village"
-                  disabled={true}
+                  disabled={!cell}
+                  applicantData={villages}
                 />,
                 "village"
               )}
@@ -597,15 +655,15 @@ const SignUpPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setAccountType("")}
-                className="w-1/3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-full transition duration-200"
+                  className="mdc-button mdc-button-secondary w-1/3 py-3"
               >
                 Back
               </button>
-              <button
-                type="submit"
-                disabled={registering || !isTinValidated}
-                className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-full transition duration-200"
-              >
+                <button
+                  type="submit"
+                  disabled={registering}
+                  className="mdc-button mdc-button-primary w-2/3 py-3 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
                 {registering ? "Registering..." : "Register"}
               </button>
             </div>

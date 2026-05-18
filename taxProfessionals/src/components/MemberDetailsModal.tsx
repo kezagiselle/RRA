@@ -6,9 +6,6 @@ import {
   Eye,
   Download,
   RefreshCw,
-  CheckCircle,
-  Clock,
-  XCircle,
   AlertTriangle,
   User,
   Mail,
@@ -16,7 +13,6 @@ import {
   FileText,
   Building,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import type { CompanyMember, CompanyAccount } from "../types/company";
 import type { Application } from "../types/application";
 import {
@@ -35,7 +31,6 @@ import { getDetails } from "../services/ViewApplicantDetails";
 import { getAllDocuments } from "../services/getDocuments";
 import { viewDocument } from "../services/viewDocument";
 import { updateDocument } from "../services/updateDocument";
-import { updateRejectedDocument } from "../services/updateRejectedDocument";
 import { resubmitApplication } from "../services/resubmitApplication";
 import { downloadCertificate } from "../services/downloadCertificate";
 import StatusBadge from "./StatusBadge";
@@ -56,7 +51,6 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const navigate = useNavigate();
   const [application, setApplication] = useState<Application | null>(null);
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -548,12 +542,12 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-gray-800/50 z-50 flex items-center justify-center p-4"
+        className="mdc-modal-overlay z-50"
         onClick={onClose}
       >
         {/* Modal */}
         <div
-          className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          className="mdc-modal-card max-w-4xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -779,10 +773,10 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                   <div className="mt-4 flex flex-wrap gap-3">
                     {/* Download Certificate - APPROVED */}
                     {application.status === ApplicationStatus.APPROVED && (
-                      <button
+                    <button
                         onClick={handleDownloadCertificate}
                         disabled={downloadingCertificate}
-                        className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
+                      className="mdc-button mdc-button-primary flex items-center space-x-2 disabled:bg-gray-400 text-white font-semibold px-4 py-2 transition duration-200"
                       >
                         {downloadingCertificate ? (
                           <>
@@ -803,7 +797,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       <button
                         onClick={handleDownloadCertificate}
                         disabled={downloadingCertificate}
-                        className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
+                        className="mdc-button flex items-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 transition duration-200"
                       >
                         {downloadingCertificate ? (
                           <>
@@ -836,7 +830,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                               });
                             }
                           }}
-                          className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
+                          className="mdc-button flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 transition duration-200"
                         >
                           <RefreshCw size={20} />
                           <span>Update Documents</span>
@@ -853,7 +847,7 @@ const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                       <button
                         onClick={handleResubmit}
                         disabled={resubmitting}
-                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 rounded-lg transition duration-200"
+                        className="mdc-button mdc-button-primary flex items-center space-x-2 disabled:bg-gray-400 text-white font-semibold px-4 py-2 transition duration-200"
                       >
                         {resubmitting ? (
                           <>

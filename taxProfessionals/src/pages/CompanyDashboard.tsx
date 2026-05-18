@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -7,7 +7,6 @@ import {
   X,
   User,
   Mail,
-  Phone,
   Plus,
   Upload,
   Users,
@@ -20,7 +19,6 @@ import { getCurrentUser } from "../services/getCurrentUser";
 import { getCompanyMembers } from "../services/getCompanyMembers";
 import { deleteCompanyMember } from "../services/deleteCompanyMember";
 import type { CompanyAccount, CompanyMember } from "../types/company";
-import { AccountType } from "../types/company";
 import { ApplicationStatus } from "../types/application";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Toast from "../components/Toast";
@@ -47,9 +45,6 @@ export default function CompanyDashboard() {
     message: "",
     type: "info",
   });
-  const [selectedMember, setSelectedMember] = useState<CompanyMember | null>(
-    null
-  );
   const [selectedMemberForDetails, setSelectedMemberForDetails] =
     useState<CompanyMember | null>(null);
 
@@ -176,7 +171,6 @@ export default function CompanyDashboard() {
   };
 
   const handleUploadForMember = (member: CompanyMember) => {
-    setSelectedMember(member);
     // Store selected member in localStorage or state management
     localStorage.setItem("selectedMemberTpin", member.tpin);
     navigate("/documents");
@@ -189,7 +183,7 @@ export default function CompanyDashboard() {
         member: {
           id: member.memberId,
           fullName: member.fullName,
-          email: member.email,
+          email: "",
           phoneNumber: member.phoneNumber,
           nid: member.nid,
           tpin: member.tpin,
@@ -244,7 +238,7 @@ export default function CompanyDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="mdc-page">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -252,8 +246,8 @@ export default function CompanyDashboard() {
 
   if (error || !companyAccount) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-100">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center border border-gray-100">
           <div className="bg-red-50 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
             <X className="h-10 w-10 text-red-500" />
           </div>
@@ -265,7 +259,7 @@ export default function CompanyDashboard() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
+            className="mdc-button mdc-button-primary px-8 py-3"
           >
             Go to Login
           </button>
@@ -322,14 +316,14 @@ export default function CompanyDashboard() {
 
           {/* Navigation */}
           <nav className="p-4 space-y-2 flex-1">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 rounded-xl font-semibold border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
+            <button className="mdc-nav-btn mdc-nav-btn-active">
               <Users size={20} className="flex-shrink-0" />
               <span>Company Dashboard</span>
             </button>
 
             <button
               onClick={() => navigate("/profile")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+              className="mdc-nav-btn text-gray-600"
             >
               <User size={20} className="flex-shrink-0" />
               <span>Company Profile</span>
@@ -340,7 +334,7 @@ export default function CompanyDashboard() {
           <div className="p-4 border-t border-gray-200 bg-gray-50">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-medium hover:shadow-sm active:scale-95"
+              className="mdc-nav-btn text-red-600 hover:!bg-red-50"
             >
               <LogOut size={20} className="flex-shrink-0" />
               <span>Log Out</span>
@@ -360,7 +354,7 @@ export default function CompanyDashboard() {
         <main className="flex-1 p-4 lg:p-8 w-full overflow-y-auto overflow-x-hidden">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Company Info Card */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 lg:p-8 hover:shadow-xl transition-shadow duration-300">
+            <div className="mdc-surface-card p-6 lg:p-8">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2 tracking-tight">
@@ -409,7 +403,7 @@ export default function CompanyDashboard() {
             </div>
 
             {/* Members Section */}
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+            <div className="mdc-surface-card overflow-hidden">
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-5 flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">
@@ -444,14 +438,14 @@ export default function CompanyDashboard() {
                     </p>
                     <button
                       onClick={handleAddMember}
-                      className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+                      className="mdc-button mdc-button-primary inline-flex items-center space-x-2 px-8 py-3"
                     >
                       <Plus size={20} />
                       <span>Add First Member</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <div className="mdc-table-wrap">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
@@ -473,7 +467,7 @@ export default function CompanyDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {members.map((member, index) => (
+                        {members.map((member) => (
                           <tr
                             key={member.tpin}
                             className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200 cursor-pointer group"
@@ -518,7 +512,7 @@ export default function CompanyDashboard() {
                                 {(!member.status || member.status === ApplicationStatus.REGISTERED) ? (
                                   <button
                                     onClick={() => handleUploadForMember(member)}
-                                    className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                    className="mdc-icon-btn mdc-icon-btn-blue group"
                                     title="Upload documents for this member"
                                   >
                                     <Upload
@@ -529,7 +523,7 @@ export default function CompanyDashboard() {
                                 ) : (
                                   <button
                                     onClick={() => setSelectedMemberForDetails(member)}
-                                    className="p-2.5 bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 group"
+                                    className="mdc-icon-btn mdc-icon-btn-muted group"
                                     title="View member details"
                                   >
                                     <Eye
@@ -542,7 +536,7 @@ export default function CompanyDashboard() {
                                 {/* Edit button */}
                                 <button
                                   onClick={() => handleEditMember(member)}
-                                  className="p-2.5 bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                  className="mdc-icon-btn mdc-icon-btn-orange group"
                                   title="Edit member"
                                 >
                                   <Edit
@@ -554,7 +548,7 @@ export default function CompanyDashboard() {
                                 {/* Delete button */}
                                 <button
                                   onClick={() => handleDeleteMember(member)}
-                                  className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 group"
+                                  className="mdc-icon-btn mdc-icon-btn-red group"
                                   title="Delete member"
                                 >
                                   <Trash2

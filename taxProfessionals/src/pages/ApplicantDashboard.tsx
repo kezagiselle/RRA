@@ -1,6 +1,6 @@
 // src/pages/ApplicantDashboard.tsx
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -35,7 +35,6 @@ import {
   canResubmitApplication,
   getResubmissionBlockedMessage,
 } from "../types/application";
-import { AccountType } from "../types/company";
 import type { Document as DocumentType } from "../types/document";
 import {
   DOCUMENT_TYPE_LABELS,
@@ -525,7 +524,7 @@ export default function ApplicantDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="mdc-page">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -533,8 +532,8 @@ export default function ApplicantDashboard() {
 
   if (error || !application) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center">
           <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Error Loading Dashboard
@@ -544,7 +543,7 @@ export default function ApplicantDashboard() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+            className="mdc-button mdc-button-primary px-6 py-3"
           >
             Go to Login
           </button>
@@ -599,14 +598,14 @@ export default function ApplicantDashboard() {
 
           {/* Navigation */}
           <nav className="p-4 space-y-2 flex-1">
-            <button className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium border border-blue-200">
+            <button className="mdc-nav-btn mdc-nav-btn-active">
               <FileText size={20} />
               <span>Dashboard</span>
             </button>
 
             <button
               onClick={() => navigate("/profile")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="mdc-nav-btn text-gray-600"
             >
               <User size={20} />
               <span>Profile</span>
@@ -615,7 +614,7 @@ export default function ApplicantDashboard() {
             {canUploadDocuments && (
               <button
                 onClick={() => navigate("/documents")}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="mdc-nav-btn text-gray-600"
               >
                 <Upload size={20} />
                 <span>Apply Here</span>
@@ -627,7 +626,7 @@ export default function ApplicantDashboard() {
           <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition duration-200"
+              className="mdc-nav-btn text-red-600 hover:!bg-red-50"
             >
               <LogOut size={20} />
               <span>Log Out</span>
@@ -650,7 +649,7 @@ export default function ApplicantDashboard() {
         >
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Welcome Message */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="mdc-surface p-6">
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
                 Welcome, {application.fullName}!
               </h1>
@@ -660,7 +659,7 @@ export default function ApplicantDashboard() {
             </div>
 
             {/* Application Status Card */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="mdc-surface-card overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-800">
                   Application Status
@@ -1034,7 +1033,7 @@ export default function ApplicantDashboard() {
             </div>
 
             {/* Documents Section */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="mdc-surface-card overflow-hidden">
               <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-800">
                   My Documents
@@ -1069,14 +1068,14 @@ export default function ApplicantDashboard() {
                     {canUploadDocuments && (
                       <button
                         onClick={() => navigate("/documents")}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+                        className="mdc-button mdc-button-primary px-6 py-3"
                       >
                         Apply Here
                       </button>
                     )}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="mdc-table-wrap">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">
@@ -1142,7 +1141,7 @@ export default function ApplicantDashboard() {
                                       processingDocId === doc.docId &&
                                       actionType === "view"
                                     }
-                                    className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    className="mdc-icon-btn mdc-icon-btn-blue disabled:bg-gray-400"
                                     title="View document"
                                   >
                                     {processingDocId === doc.docId &&
@@ -1164,7 +1163,7 @@ export default function ApplicantDashboard() {
                                       processingDocId === doc.docId &&
                                       actionType === "download"
                                     }
-                                    className="p-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                                    className="mdc-icon-btn mdc-icon-btn-green disabled:bg-gray-400"
                                     title="Download document"
                                   >
                                     {processingDocId === doc.docId &&
@@ -1217,7 +1216,7 @@ export default function ApplicantDashboard() {
                                           !isProblematic && (
                                             <button
                                               disabled
-                                              className="p-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed"
+                                              className="mdc-icon-btn mdc-icon-btn-muted cursor-not-allowed"
                                               title="Only problematic documents can be updated"
                                             >
                                               <RefreshCw size={16} />

@@ -6,10 +6,13 @@ import { useNavigate } from "react-router-dom";
 import Errors from "../components/Errors";
 import rra from "../imgs/rra.png";
 import { getProvince } from "../services/Province";
+import { getDistrict } from "../services/District";
+import { getSector } from "../services/Sector";
+import { getCell } from "../services/Cell";
+import { getVillage } from "../services/Villages";
 import { getCurrentUser } from "../services/getCurrentUser";
 import { getCompanyMembers } from "../services/getCompanyMembers";
-import { AccountType } from "../types/company";
-import type { CompanyAccount, CompanyMember } from "../types/company";
+import type { CompanyMember } from "../types/company";
 
 function ApplicantPage() {
   const navigate = useNavigate();
@@ -19,6 +22,13 @@ function ApplicantPage() {
   const [sector, setSector] = useState("");
   const [cell, setCell] = useState("");
   const [village, setVillage] = useState("");
+
+  // Location data lists (provincedata already exists as state below)
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [sectors, setSectors] = useState<any[]>([]);
+  const [cells, setCells] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+
   const [bachelor, setBachelor] = useState<File | null>(null);
   const [professionalDocs, setProfessionalDocs] = useState<FileList | null>(
     null
@@ -191,6 +201,115 @@ function ApplicantPage() {
     setCurrentStep(currentStep - 1);
   };
 
+  // Location change handlers
+  const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const pName = e.target.value;
+    setProvince(pName);
+    
+    setSector("");
+    setCell("");
+    setVillage("");
+    setDistricts([]);
+    setSectors([]);
+    setCells([]);
+    setVillages([]);
+
+    if (pName) {
+      const selectedProv = provincedata.find(p => p.name === pName);
+      if (selectedProv) {
+        const pId = selectedProv.locationId;
+        try {
+          const response = await getDistrict(pId);
+          if (response.data.success) {
+            setDistricts(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch districts:", err);
+        }
+      }
+    }
+  };
+
+  const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const dName = e.target.value;
+    setDistrict(dName);
+    
+    // Reset lower levels
+    setSector("");
+    setCell("");
+    setVillage("");
+    setSectors([]);
+    setCells([]);
+    setVillages([]);
+    if (dName) {
+      const selectedDist = districts.find(d => d.name === dName);
+      if (selectedDist) {
+        const dId = selectedDist.locationId;
+        try {
+          const response = await getSector(dId);
+          if (response.data.success) {
+            setSectors(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch sectors:", err);
+        }
+      }
+    }
+  };
+
+  const handleSectorChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sName = e.target.value;
+    setSector(sName);
+    
+    // Reset lower levels
+    setCell("");
+    setVillage("");
+    setCells([]);
+    setVillages([]);
+    if (sName) {
+      const selectedSect = sectors.find(s => s.name === sName);
+      if (selectedSect) {
+        const sId = selectedSect.locationId;
+        try {
+          const response = await getCell(sId);
+          if (response.data.success) {
+            setCells(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch cells:", err);
+        }
+      }
+    }
+  };
+
+  const handleCellChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cName = e.target.value;
+    setCell(cName);
+    
+    // Reset lower level
+    setVillage("");
+    setVillages([]);
+
+    if (cName) {
+      const selectedCell = cells.find(c => c.name === cName);
+      if (selectedCell) {
+        const cId = selectedCell.locationId;
+        try {
+          const response = await getVillage(cId);
+          if (response.data.success) {
+            setVillages(response.data.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch villages:", err);
+        }
+      }
+    }
+  };
+
+  const handleVillageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setVillage(e.target.value);
+  };
+
   const renderField = (input: React.ReactNode, errorKey: string) => (
     <div className="flex flex-col">
       {input}
@@ -200,7 +319,7 @@ function ApplicantPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="mdc-page">
         <div className="text-center">
           <p className="text-gray-600">Loading...</p>
         </div>
@@ -209,9 +328,9 @@ function ApplicantPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-4 sm:py-6 lg:py-10 px-3 sm:px-4 lg:px-8">
+    <div className="mdc-page items-start">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white shadow-lg rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8">
+        <div className="mdc-card p-4 sm:p-6 lg:p-8">
           <div className="flex justify-center mb-4 sm:mb-6">
             <img
               src={rra}
@@ -293,10 +412,7 @@ function ApplicantPage() {
                       label="Province"
                       icon={<RiArrowDropDownLine />}
                       value={province}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setProvince(value);
-                      }}
+                      onChange={(e) => handleProvinceChange(e as React.ChangeEvent<HTMLSelectElement>)}
                       applicantData={provincedata}
                     />,
                     "province"
@@ -306,10 +422,9 @@ function ApplicantPage() {
                       label="District"
                       icon={<RiArrowDropDownLine />}
                       value={district}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setDistrict(value);
-                      }}
+                      onChange={(e) => handleDistrictChange(e as React.ChangeEvent<HTMLSelectElement>)}
+                      disabled={!province}
+                      applicantData={districts}
                     />,
                     "district"
                   )}
@@ -318,10 +433,9 @@ function ApplicantPage() {
                       label="Sector"
                       icon={<RiArrowDropDownLine />}
                       value={sector}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSector(value);
-                      }}
+                      onChange={(e) => handleSectorChange(e as React.ChangeEvent<HTMLSelectElement>)}
+                      disabled={!district}
+                      applicantData={sectors}
                     />,
                     "sector"
                   )}
@@ -330,10 +444,9 @@ function ApplicantPage() {
                       label="Cell"
                       icon={<RiArrowDropDownLine />}
                       value={cell}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCell(value);
-                      }}
+                      onChange={(e) => handleCellChange(e as React.ChangeEvent<HTMLSelectElement>)}
+                      disabled={!sector}
+                      applicantData={cells}
                     />,
                     "cell"
                   )}
@@ -342,10 +455,9 @@ function ApplicantPage() {
                       label="Village"
                       icon={<RiArrowDropDownLine />}
                       value={village}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setVillage(value);
-                      }}
+                      onChange={(e) => handleVillageChange(e as React.ChangeEvent<HTMLSelectElement>)}
+                      disabled={!cell}
+                      applicantData={villages}
                     />,
                     "village"
                   )}

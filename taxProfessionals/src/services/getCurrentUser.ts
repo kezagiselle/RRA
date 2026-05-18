@@ -1,7 +1,7 @@
 // src/services/getCurrentUser.ts
 
 import axios from "axios";
-import type { ApiResponse, Application } from "../types/application";
+import type { Application } from "../types/application";
 import type { CompanyAccount } from "../types/company";
 import { AccountType } from "../types/company";
 

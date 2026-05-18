@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { FaLock } from "react-icons/fa";
 import rra from "../imgs/rra.png";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { resetPassword } from "../services/ResetPassword";
 
 const ResetPasswordPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [step, setStep] = useState(1);
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -14,24 +15,21 @@ const ResetPasswordPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const tokenFromUrl = searchParams.get("token");
-    const typeFromUrl = searchParams.get("type");
-    
-    // Verify this is for tax professional or company accounts
-    if (typeFromUrl && typeFromUrl !== "taxprofessional" && typeFromUrl !== "company") {
-      setError("This reset link is not valid for tax professional accounts. Please use the correct reset link.");
+  // If identifier is passed from ForgotPasswordPage, we could display it,
+  // but it is not strictly required for the API request.
+  const identifier = location.state?.identifier;
+
+  const handleOtpSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (token.length !== 6) {
+      setError("Please enter a valid 6-digit OTP.");
       return;
     }
-    
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-    } else {
-      setError("Invalid or missing reset token. Please request a new password reset link.");
-    }
-  }, [searchParams]);
+    setError("");
+    setStep(2);
+  };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -77,8 +75,8 @@ const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
-      <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg bg-white p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl space-y-4 sm:space-y-5 lg:space-y-6">
+    <div className="mdc-page">
+      <div className="mdc-card w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5 lg:space-y-6">
         <div className="flex justify-center mb-2 sm:mb-3 lg:mb-4">
           <img
             src={rra}
@@ -96,64 +94,110 @@ const ResetPasswordPage: React.FC = () => {
         </p>
 
         {!success ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-gray-600 text-sm sm:text-base text-center">
-              Enter your new password below.
-            </p>
-
-            <div className="relative">
-              <input
-                type="password"
-                placeholder="New Password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                disabled={loading || !token}
-                className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
-              />
-              <FaLock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base sm:text-lg" />
-            </div>
-
-            <div className="relative">
-              <input
-                type="password"
-                placeholder="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={loading || !token}
-                className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
-              />
-              <FaLock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base sm:text-lg" />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !token}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 sm:py-3 lg:py-4 rounded-full transition duration-200 text-sm sm:text-base lg:text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {loading ? "Resetting..." : "Reset Password"}
-            </button>
-
-            {error && (
-              <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
-                {error}
+          step === 1 ? (
+            <form onSubmit={handleOtpSubmit} className="space-y-4">
+              <p className="text-gray-600 text-sm sm:text-base text-center">
+                {identifier ? `Enter the 6-digit OTP sent to the email registered for ${identifier}.` : "Enter the 6-digit OTP sent to your email."}
               </p>
-            )}
 
-            <div className="text-center pt-3 sm:pt-4">
-              <a
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/");
-                }}
-                className="text-blue-400 hover:text-blue-600 text-sm sm:text-base underline transition duration-200"
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="6-digit OTP Code"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  required
+                  maxLength={6}
+                  disabled={loading}
+                  className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
+                />
+                <FaLock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base sm:text-lg" />
+              </div>
+
+              <button
+                type="submit"
+                disabled={token.length !== 6}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 sm:py-3 lg:py-4 rounded-full transition duration-200 text-sm sm:text-base lg:text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Back to Login
-              </a>
-            </div>
-          </form>
+                Next
+              </button>
+
+              {error && (
+                <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="text-center pt-3 sm:pt-4">
+                <a
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/");
+                  }}
+                  className="text-blue-400 hover:text-blue-600 text-sm sm:text-base underline transition duration-200"
+                >
+                  Cancel
+                </a>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <p className="text-gray-600 text-sm sm:text-base text-center">
+                Create a new password.
+              </p>
+
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
+                />
+                <FaLock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base sm:text-lg" />
+              </div>
+
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full border border-gray-300 rounded-lg py-3 sm:py-3 lg:py-4 px-3 sm:px-4 pl-10 sm:pl-11 lg:pl-12 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base lg:text-lg"
+                />
+                <FaLock className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-base sm:text-lg" />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 sm:py-3 lg:py-4 rounded-full transition duration-200 text-sm sm:text-base lg:text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? "Resetting..." : "Reset Password"}
+              </button>
+
+              {error && (
+                <p className="text-red-500 text-xs sm:text-sm lg:text-base text-center mt-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="text-center pt-3 sm:pt-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-blue-400 hover:text-blue-600 text-sm sm:text-base underline transition duration-200"
+                >
+                  Back to OTP
+                </button>
+              </div>
+            </form>
+          )
         ) : (
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">

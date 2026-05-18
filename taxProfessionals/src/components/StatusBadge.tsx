@@ -40,7 +40,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   return (
     <span
-      className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border-2 ${getStatusStyles()}`}
+      className={`mdc-badge inline-flex items-center px-4 py-2 text-sm font-semibold border-2 ${getStatusStyles()}`}
     >
       {getStatusText()}
     </span>

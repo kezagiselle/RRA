@@ -15,8 +15,7 @@ import {
   BachelorDegree,
   ProfessionalQualification,
 } from "../types/application";
-import { AccountType } from "../types/company";
-import type { CompanyAccount, CompanyMember } from "../types/company";
+import type { CompanyMember } from "../types/company";
 
 const DocumentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -153,7 +152,7 @@ const DocumentPage: React.FC = () => {
           }
         } else {
           // Individual account
-          const appData = userData as Application;
+          const appData = userData as unknown as Application;
           setApplication(appData);
           
           // Check application status - only REGISTERED users can upload documents
@@ -401,8 +400,6 @@ const DocumentPage: React.FC = () => {
       console.log("DocumentPage: Total documents to upload:", documents.length);
 
       // Determine TPIN to use: selected member TPIN for company admin, or logged-in user's TPIN
-      const tpinToUse = selectedMemberTpin || tinNumber;
-      
       // Upload all documents (each with tpin, documentType, and file)
       uploadAllDocuments(tinNumber, documents, selectedMemberTpin || undefined)
         .then((response: any) => {
@@ -498,8 +495,8 @@ const DocumentPage: React.FC = () => {
   // Show loading while checking status
   if (checkingStatus) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full text-center">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
           <p className="text-gray-600">Checking application status...</p>
         </div>
@@ -546,8 +543,8 @@ const DocumentPage: React.FC = () => {
     };
 
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full text-center">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center">
           {getStatusIcon()}
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             {getStatusTitle()}
@@ -573,8 +570,8 @@ const DocumentPage: React.FC = () => {
   // Show error if status check failed
   if (statusError) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full text-center">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center">
           <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
           <p className="text-gray-600 mb-6">{statusError}</p>
@@ -598,9 +595,9 @@ const DocumentPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-4 sm:py-6 lg:py-10 px-3 sm:px-4 lg:px-8">
+    <div className="mdc-page items-start">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white shadow-lg rounded-xl lg:rounded-2xl p-4 sm:p-6 lg:p-8">
+        <div className="mdc-card p-4 sm:p-6 lg:p-8">
           <div className="flex justify-center mb-4 sm:mb-6">
             <img
               src={rra}

@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -21,11 +21,9 @@ import {
 } from "lucide-react";
 import rra from "../imgs/rra.png";
 import { getCurrentUser } from "../services/getCurrentUser";
-import { getAllDocuments } from "../services/getDocuments";
 
 import type { Application } from "../types/application";
 import { ApplicationStatus, BusinessStatus } from "../types/application";
-import type { Document as DocumentType } from "../types/document";
 
 import StatusBadge from "../components/StatusBadge";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -33,9 +31,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 export default function ProfilePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [application, setApplication] = useState<Application | null>(null);
-  const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCompany, setIsCompany] = useState(false);
 
@@ -57,7 +53,7 @@ export default function ProfilePage() {
         const response = await getCurrentUser();
         console.log("ProfilePage: Application data:", response.data);
 
-        const userData = response.data.data;
+        const userData: any = response.data.data;
         
         // Check if this is a company account
         const isCompanyAccount = !!userData.tinCompany;
@@ -85,9 +81,9 @@ export default function ProfilePage() {
           };
           console.log("ProfilePage: Mapped company data:", mappedData);
           console.log("ProfilePage: Final applicationDate:", mappedData.applicationDate);
-          setApplication(mappedData);
+          setApplication(mappedData as Application);
         } else {
-          setApplication(userData);
+          setApplication(userData as Application);
         }
       } catch (err: any) {
         console.error("ProfilePage: Error fetching application:", err);
@@ -111,48 +107,6 @@ export default function ProfilePage() {
 
     fetchApplicationData();
   }, [navigate]);
-
-  // Fetch documents data
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!application) return;
-
-      // Skip document fetching for company accounts
-      if (isCompany) {
-        console.log("ProfilePage: Company account detected, skipping documents fetch");
-        setDocumentsLoading(false);
-        setDocuments([]);
-        return;
-      }
-
-      // For individual accounts, use tpin
-      const tin = application.tpin;
-      
-      if (!tin) {
-        console.log("ProfilePage: No TPIN available, skipping documents fetch");
-        setDocumentsLoading(false);
-        return;
-      }
-
-      try {
-        setDocumentsLoading(true);
-        console.log("ProfilePage: Fetching documents for TPIN:", tin);
-
-        const response = await getAllDocuments(tin);
-        console.log("ProfilePage: Documents data:", response.data);
-
-        setDocuments(response.data.data || []);
-      } catch (err: any) {
-        console.error("ProfilePage: Error fetching documents:", err);
-        // Don't show error toast for documents, just set empty array
-        setDocuments([]);
-      } finally {
-        setDocumentsLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [application]);
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -202,7 +156,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="mdc-page">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -210,8 +164,8 @@ export default function ProfilePage() {
 
   if (error || !application) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center">
           <User className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Error Loading Profile
@@ -221,7 +175,7 @@ export default function ProfilePage() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+            className="mdc-button mdc-button-primary px-6 py-3"
           >
             Go to Login
           </button>
@@ -235,7 +189,7 @@ export default function ProfilePage() {
     application.status === ApplicationStatus.REGISTERED;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="mdc-app-shell bg-gray-50">
       {/* Mobile Header */}
       <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center space-x-3">
@@ -273,13 +227,13 @@ export default function ProfilePage() {
           <nav className="p-4 space-y-2 flex-1">
             <button
               onClick={() => navigate(isCompany ? "/company-dashboard" : "/dashboard")}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="mdc-nav-btn text-gray-600"
             >
               <FileText size={20} />
               <span>{isCompany ? "Company Dashboard" : "Dashboard"}</span>
             </button>
 
-            <button className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium border border-blue-200">
+            <button className="mdc-nav-btn mdc-nav-btn-active">
               <User size={20} />
               <span>{isCompany ? "Company Profile" : "Profile"}</span>
             </button>
@@ -287,7 +241,7 @@ export default function ProfilePage() {
             {canUploadDocuments && (
               <button
                 onClick={() => navigate("/documents")}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="mdc-nav-btn text-gray-600"
               >
                 <Upload size={20} />
                 <span>
@@ -303,7 +257,7 @@ export default function ProfilePage() {
           <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition duration-200"
+              className="mdc-nav-btn text-red-600 hover:!bg-red-50"
             >
               <LogOut size={20} />
               <span>Log Out</span>
@@ -323,7 +277,7 @@ export default function ProfilePage() {
         <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Page Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="mdc-surface p-6">
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
                 My Profile
               </h1>
@@ -333,8 +287,8 @@ export default function ProfilePage() {
             </div>
 
             {/* Personal Information Section */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
+            <div className="mdc-surface-card overflow-hidden">
+              <div className="mdc-section-header px-6 py-4">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
                   <User className="h-5 w-5 mr-2" />
                   {isCompany ? "Company Information" : "Personal Information"}
@@ -437,8 +391,8 @@ export default function ProfilePage() {
 
             {/* Address Information Section */}
             {application.workAddress && (
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-gray-200">
+              <div className="mdc-surface-card overflow-hidden">
+                <div className="mdc-section-header px-6 py-4">
                   <h2 className="text-xl font-bold text-gray-800 flex items-center">
                     <MapPin className="h-5 w-5 mr-2" />
                     Address Information
@@ -464,8 +418,8 @@ export default function ProfilePage() {
               application.mastersDegree ||
               application.professionalQualification ||
               application.otherProfessionalDetails) && (
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-gray-200">
+              <div className="mdc-surface-card overflow-hidden">
+                <div className="mdc-section-header px-6 py-4">
                   <h2 className="text-xl font-bold text-gray-800 flex items-center">
                     <GraduationCap className="h-5 w-5 mr-2" />
                     Education & Qualifications
@@ -537,8 +491,8 @@ export default function ProfilePage() {
             )}
 
             {/* Application Information Section */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 border-b border-gray-200">
+            <div className="mdc-surface-card overflow-hidden">
+              <div className="mdc-section-header px-6 py-4">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
                   <FileText className="h-5 w-5 mr-2" />
                   Application Information

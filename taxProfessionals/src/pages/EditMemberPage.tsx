@@ -146,7 +146,7 @@ export default function EditMemberPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <div className="mdc-app-shell bg-gradient-to-br from-blue-50 via-white to-blue-50">
       {/* Notification Toast */}
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">

@@ -39,8 +39,14 @@ const CompanyPage: React.FC = () => {
     if (Object.keys(formErrors).length === 0) {
       // Prepare data for API - tinCompany and user's TIN
       const companyData = {
-        tin: userTin?.trim(), // User's TIN from login
-        tinCompany: tinCompany.trim() // Company TIN
+        companyTin: tinCompany.trim(),
+        companyName: "",
+        companyEmail: "",
+        password: "",
+        applicantNames: "",
+        accountType: "COMPANY",
+        tin: userTin?.trim(),
+        tinCompany: tinCompany.trim()
       };
 
       console.log('CompanyPage: Submitting company registration');
@@ -100,10 +106,10 @@ const CompanyPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
+    <div className="mdc-page">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg bg-white p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl space-y-4 sm:space-y-5 lg:space-y-6"
+        className="mdc-card w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5 lg:space-y-6"
       >
         <div className="flex justify-center mb-2 sm:mb-3 lg:mb-4">
           <img

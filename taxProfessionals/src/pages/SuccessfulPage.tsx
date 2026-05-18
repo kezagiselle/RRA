@@ -1,4 +1,3 @@
-import React from "react";
 import { FaCheckCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -6,8 +5,8 @@ function SuccessfulPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
-      <div className="bg-white shadow-lg sm:shadow-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 xl:p-10 text-center max-w-xs sm:max-w-sm md:max-w-md w-full">
+    <div className="mdc-page flex-col">
+      <div className="mdc-card p-4 sm:p-6 lg:p-8 xl:p-10 text-center max-w-xs sm:max-w-sm md:max-w-md w-full">
         <div className="flex justify-center mb-4 sm:mb-5 lg:mb-6">
           <FaCheckCircle className="text-green-500 text-4xl sm:text-5xl lg:text-6xl animate-bounce" />
         </div>

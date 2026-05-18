@@ -54,7 +54,7 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border-l-4 shadow-lg ${getToastStyles()} min-w-72 max-w-md`}
+      className={`mdc-alert fixed bottom-4 right-4 z-50 flex items-center gap-3 border-l-4 shadow-lg ${getToastStyles()} min-w-72 max-w-md`}
     >
       {getIcon()}
       <p className="flex-1 text-sm font-medium">{message}</p>

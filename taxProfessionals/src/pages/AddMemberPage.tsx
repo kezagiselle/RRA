@@ -8,13 +8,11 @@ import {
   FaArrowLeft,
 } from "react-icons/fa";
 import rra from "../imgs/rra.png";
-import ApplicantForm from "../components/ApplicantForm";
 import Errors from "../components/Errors";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getCurrentUser } from "../services/getCurrentUser";
 import { addCompanyMember } from "../services/addCompanyMember";
 import type { CompanyAccount } from "../types/company";
-import { AccountType } from "../types/company";
 
 const AddMemberPage: React.FC = () => {
   const navigate = useNavigate();
@@ -110,13 +108,14 @@ const AddMemberPage: React.FC = () => {
       console.log("AddMemberPage: Submitting member data:", memberData);
 
       // Use companyId if available, otherwise use companyTin
+      const numericCompanyId = Number(companyAccount.companyId);
       const companyIdentifier =
-        companyAccount.companyId && companyAccount.companyId > 0
-          ? companyAccount.companyId
+        Number.isFinite(numericCompanyId) && numericCompanyId > 0
+          ? numericCompanyId
           : companyAccount.companyTin;
 
       addCompanyMember(companyIdentifier, memberData)
-        .then((response) => {
+        .then(() => {
           setLoading(false);
           alert("Member added successfully!");
           navigate("/company-dashboard");
@@ -166,7 +165,7 @@ const AddMemberPage: React.FC = () => {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="mdc-page">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -174,8 +173,8 @@ const AddMemberPage: React.FC = () => {
 
   if (!companyAccount) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-100">
+      <div className="mdc-page p-4">
+        <div className="mdc-card p-8 max-w-md w-full text-center border border-gray-100">
           <div className="bg-red-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
             <FaUser className="text-3xl text-red-500" />
           </div>
@@ -187,7 +186,7 @@ const AddMemberPage: React.FC = () => {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
+            className="mdc-button mdc-button-primary px-8 py-3"
           >
             Go to Login
           </button>
@@ -197,8 +196,8 @@ const AddMemberPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
-      <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-2xl space-y-4 sm:space-y-5 lg:space-y-6 border border-gray-100">
+    <div className="mdc-page">
+      <div className="mdc-card w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5 lg:space-y-6 border border-gray-100">
         {/* Back Button */}
         <button
           onClick={() => navigate("/company-dashboard")}
@@ -332,14 +331,14 @@ const AddMemberPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/company-dashboard")}
-              className="w-1/3 bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-semibold py-3.5 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+              className="mdc-button mdc-button-secondary w-1/3 py-3.5"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="w-2/3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:transform-none"
+              className="mdc-button mdc-button-primary w-2/3 py-3.5 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? (
                 <span className="flex items-center justify-center space-x-2">

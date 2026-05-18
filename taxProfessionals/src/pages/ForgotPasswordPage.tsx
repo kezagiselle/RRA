@@ -19,8 +19,8 @@ const ForgotPasswordPage: React.FC = () => {
 
     try {
       await forgotPassword(tinNumber);
-      setSuccess(true);
-      setError("");
+      // Navigate directly to reset password page to enter OTP
+      navigate("/reset-password", { state: { identifier: tinNumber } });
     } catch (error: any) {
       console.error("ForgotPasswordPage: Error:", error);
       console.error("ForgotPasswordPage: Error response data:", error.response?.data);
@@ -38,8 +38,8 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-10">
-      <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg bg-white p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl space-y-4 sm:space-y-5 lg:space-y-6">
+    <div className="mdc-page">
+      <div className="mdc-card w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-5 lg:space-y-6">
         <div className="flex justify-center mb-2 sm:mb-3 lg:mb-4">
           <img
             src={rra}
@@ -59,7 +59,7 @@ const ForgotPasswordPage: React.FC = () => {
         {!success ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-gray-600 text-sm sm:text-base text-center">
-              Enter your TIN number and we'll send a password reset link to your registered email.
+              Enter your TIN number and we'll send a 6-digit OTP to your registered email.
             </p>
 
             <div className="relative">
@@ -80,7 +80,7 @@ const ForgotPasswordPage: React.FC = () => {
               disabled={loading}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 sm:py-3 lg:py-4 rounded-full transition duration-200 text-sm sm:text-base lg:text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? "Sending..." : "Send Reset Link"}
+              {loading ? "Sending..." : "Send OTP"}
             </button>
 
             {error && (
